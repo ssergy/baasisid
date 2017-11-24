@@ -1,188 +1,190 @@
 swagger: '2.0'
 info:
   version: 1.0.0
-  description: >
+  description: |
     ## BAASIS ID integration API
     BAASIS ID provides 2 available integration approaches:
-
+    
     1) Web Widget enables you to embed verification features in your website or
     application
-
-
+    
     2) Customer integration using our APIs.
 
 
-    ### Web Widget integration
-
+    ### 1. Web Widget integration
+    
     Embed the BAASIS ID Login button in your registration/authorisation form (like Facebook, Google+ and other social network buttons);
       You are able to find 3 different colour schemes.
-
-    Insert widget code in <head> ... </head> section on your website:
-      ```
-      <script type="text/javascript" src="https://api.baasisid.com/assets/js/widget.js"></script>
-      ```
+    
+    Insert widget code in &lt;head&gt; ... &lt;/head&gt; section on your website:
+    ```
+    <script type="text/javascript" src="https://api.baasisid.com/assets/js/widget.js"></script>
+    ```
     ---
-
-    Add widget location on your website:
-
-      ```
-      <div id="bas-widget-container" style="min-height: 350px;"> BAASIS ID loading...</div>
-      ```
-
+    
+    Add widget location on your website after &lt;body&gt; tag:
+    
+    ```
+    <div id="bas-widget-container" style="min-height: 350px;"> BAASIS ID loading...</div>
+    ```
+    
     ---
-
-    Add widget code on the bottom of your page before </body> tag:
-
-      ```
-        <script type="text/javascript">
-           window.BAS.AS.initFrame({
-               key: "BAASISID_API_KEY",
-                bas_gw: "https://api.baasisid.com/",
-                container_id: 'bas-widget-container',
-
-                ui: {
-                    width: '100%',
-                    height: '108px',
-                    style: '',
+    
+    Add widget code on the bottom of your page before &lt;/body&gt; tag:
+    
+    ```
+    <script type="text/javascript">
+       window.BAS.AS.initFrame({
+           key: "BAASISID_API_KEY",
+            bas_gw: "https://api.baasisid.com/",
+            container_id: "bas-widget-container",
+    
+            ui: {
+                width: "100%",
+                height: "108px",
+                style: "",
+            },
+    
+            options: {
+    
+            },
+            events:{
+                onLoad: function(){
+                   console.log("BAS AS loaded");
                 },
-
-                options: {
-
+    
+                onManualCheck: function(result) {
+                   if (result.status === "ok"){
+                      // User check success
+                      // ... Add Your code here ...
+                   } else if (result.status === "canceled") {
+                     // User pushed cancel button
+                   }
                 },
-                events:{
-                    onLoad: function(){
-                       console.log('BAS AS loaded');
-                    },
-
-                    onManualCheck: function(result) {
-                       if (result.status === 'ok'){
-                          // User check success
-                          // ... Add Your code here ...
-                       } else if (result.status === 'canceled') {
-                         // User pushed cancel button
-                       }
-                    },
-
-                    onAuthSuccess: function(result) {
-                       // User auth success
-                       // ... Add Your code here ...
-                    },
-                }
-            });
-        </script>
-      ```
+    
+                onAuthSuccess: function(result) {
+                   // User auth success
+                   // ... Add Your code here ...
+                },
+            }
+        });
+    </script>
+    ```
     ---
-
-
+    
     **Widget settings:**
-
-
+    
     Replace BAASISID_API_KEY with the BAASIS ID API Key.
-
-
+    
     You can find the Key in your CRM profile;
-
-
+    
+    
     You have to configure the data transfer using 2 Widget methods: **onManualCheck** and **onAuthSuccess**;
-
-
+    
+    
     **onManualCheck** - the method is called by Widget in case of successful  / unsuccessful end of the user registration via Widget.
-
+    
     You will receive object called "result".
-
-
+    
+    
     If user successfully registered, result looks like:
-
+    
      ```
      {status: 'ok', user_hash: 'XXXXXXXXXXX', api_access_token: 'YYYYYYYYYYYYY'}
      ```
-
+    
       In case if registration has been canceled:
-
-
+    
+    
     ```
-      {status: 'canceled'}
+    {status: 'canceled'}
     ```
-
+    
     The values of "result" object:
      * status - request status;
      * user_hash - unique string user ID;
      * api_access_token - token to work with BAASIS ID server;
-
+    
     Token lifetime: 60 minutes.
-
-
+    
+    
     **onAuthSuccess** - the method is called by Widget in case of successful user authorisation.
       You will receive object called "result". If user successfully registered, result looks similiarly to onManualCheck in case of completion:
     ```
-        {status: 'ok', user_hash: 'XXXXXXXXXXX', api_access_token: 'YYYYYYYYYYYYY'}
+    {status: 'ok', user_hash: 'XXXXXXXXXXX', api_access_token: 'YYYYYYYYYYYYY'}
     ```
-
+    
     If you receive a successful "result" object, you must send a request to your server and execute a server API request from the **server**:
 
-
-      (see "receiving user information and status validation" in this API doc)
-
+    
+      (see "Users / Receiving user information and status validation" in this API doc)
+    
     ```
-      /users/{user_hash}/{api_access_token}?secret=secret
+    /users/{user_hash}/{api_access_token}?secret=BAASIS_API_SECRET1
+    ```
+    
+    
+    For request to Your server in javascript you can use ajax query jquery library (jquery.com)
+    
+    ```
+    function check_result(result) {
+      $.get('https://your-own-server.com/?hash='+result.user_hash+'&token='+result.api_access_token,
+      function(data) {
+      ...
+      });
+    }
+    ```
+    
+    or redirect to Your server page
+    
+    ```
+    document.location.href='https://your-own-server.com/?hash='+result.user_hash+'&token='+result.api_access_token;
+    
     ```
 
 
-    In javascript you can use ajax query jquery library (jquery.com)
-
-    ```
-      function check_result(result) {
-          $.get('https://your-own-server.com/?hash='+result.user_hash+'&token='+result.api_access_token,
-          function(data) {
-          ...
-          });
-      }
-    ```
-
-    or redirect
-
-    ```
-      document.location.href='https://your-own-server.com/?hash='+result.user_hash+'&token='+result.api_access_token;
-
-    ```
 
     ---
-
+    
+    ### 2. API integration
 
     **The order of terminal operations with API:**
-
-
+    
+    
     1) Call method: /send-form
-
-
+    
+    
     Using the method, you send basic user parameters
-
-
+    
+    
     2) Call for One-Time-Password /send-sms
-
-
+    
+    
     3) SMS code received from the user is sent to /check-sms-code
-
-
+    
+    
     4) Photo of the user document is sent to /send-document
-
-
+    
+    
     (2 requests in the case of a two-sided document - ID card)
-
-
+    
+    
     5) Send user's video (selfy) to /send-video
-
-
+    
+    
     6) Send user's bank statement /send-statement
-
-
+    
+    
     7) Call /finish request to end the user registration
-
-
+    
+    
     8) In order to receive information about the user's data confirmation, it is required frequently make a request to
     /users/{user_hash}/{api_access_token}
 
   title: BaasisID API
+tags:
+  - name: auth
+  - name: users
 consumes:
   - application/json
 produces:
@@ -192,8 +194,11 @@ basePath: /
 paths:
   /auth/baasid-login:
     post:
+      tags:
+        - auth
       summary: API Authorization
       description: Authorization of BAASIS ID registered user
+      operationId: baasid-login
       parameters:
         - name: login
           in: query
@@ -286,12 +291,177 @@ paths:
           description: >-
             Internal Server Error - problem with processing data on server.
             Please, contact with support team - support@baasisid.com
+      x-code-samples:
+        - lang: 'Curl'
+          source: |
+            curl \
+                -H "Content-Type: application/json" \
+                -X POST -d '{"key": "BAASIS_API_KEY", "login": "6581234567", "password":"demo"}' \
+                https://api.baasisid.com/auth/baasid-login
+            
+        - lang: Java
+          source: |
+            import io.swagger.client.*;
+            import io.swagger.client.auth.*;
+            import io.swagger.client.model.*;
+            import io.swagger.client.api.DefaultApi;
+            import java.io.File;
+            import java.util.*;
+            public class DefaultApiExample {
+                public static void main(String[] args) {
+                    DefaultApi apiInstance = new DefaultApi();
+                    String login = login_example; // String | The phone number of the user in the following format [country code]-[phone number]
+                    String password = password_example; // String | User password
+                    String key = key_example; // String | BAASIS ID API KEY (from panel)
+                    try {
+                        inline_response_200 result = apiInstance.authBaasidLoginPost(login, password, key);
+                        System.out.println(result);
+                    } catch (ApiException e) {
+                        System.err.println("Exception when calling DefaultApi#authBaasidLoginPost");
+                        e.printStackTrace();
+                    }
+                }
+            }
+        - lang: Android
+          source: |
+            import io.swagger.client.api.DefaultApi;
+            public class DefaultApiExample {
+                public static void main(String[] args) {
+                    DefaultApi apiInstance = new DefaultApi();
+                    String login = login_example; // String | The phone number of the user in the following format [country code]-[phone number]
+                    String password = password_example; // String | User password
+                    String key = key_example; // String | BAASIS ID API KEY (from panel)
+                    try {
+                        inline_response_200 result = apiInstance.authBaasidLoginPost(login, password, key);
+                        System.out.println(result);
+                    } catch (ApiException e) {
+                        System.err.println("Exception when calling DefaultApi#authBaasidLoginPost");
+                        e.printStackTrace();
+                    }
+                }
+            }
+        - lang: Objective-C
+          source: |
+            String *login = login_example; // The phone number of the user in the following format [country code]-[phone number]
+            String *password = password_example; // User password
+            String *key = key_example; // BAASIS ID API KEY (from panel)
+            DefaultApi *apiInstance = [[DefaultApi alloc] init];
+            // API Authorization
+            [apiInstance authBaasidLoginPostWith:login
+                password:password
+                key:key
+                          completionHandler: ^(inline_response_200 output, NSError* error) {
+                                        if (output) {
+                                            NSLog(@"%@", output);
+                                        }
+                                        if (error) {
+                                            NSLog(@"Error: %@", error);
+                                        }
+                                    }];
+        - lang: JavaScript
+          source: |
+            var BaasisIdApi = require('baasis_id_api');
+            var api = new BaasisIdApi.DefaultApi()
+            var login = login_example; // {String} The phone number of the user in the following format [country code]-[phone number]
+            var password = password_example; // {String} User password
+            var key = key_example; // {String} BAASIS ID API KEY (from panel)
+            var callback = function(error, data, response) {
+              if (error) {
+                console.error(error);
+              } else {
+                console.log('API called successfully. Returned data: ' + data);
+              }
+            };
+            api.authBaasidLoginPost(login, password, key, callback);
+        - lang: C#
+          source: |
+            using System;
+            using System.Diagnostics;
+            using IO.Swagger.Api;
+            using IO.Swagger.Client;
+            using IO.Swagger.Model;
+            namespace Example
+            {
+                public class authBaasidLoginPostExample
+                {
+                    public void main()
+                    {
+                        
+                        var apiInstance = new DefaultApi();
+                        var login = login_example;  // String | The phone number of the user in the following format [country code]-[phone number]
+                        var password = password_example;  // String | User password
+                        var key = key_example;  // String | BAASIS ID API KEY (from panel)
+                        try
+                        {
+                            // API Authorization
+                            inline_response_200 result = apiInstance.authBaasidLoginPost(login, password, key);
+                            Debug.WriteLine(result);
+                        }
+                        catch (Exception e)
+                        {
+                            Debug.Print("Exception when calling DefaultApi.authBaasidLoginPost: " + e.Message );
+                        }
+                    }
+                }
+            }
+        - lang: PHP
+          source: |
+            <?php
+            require_once(__DIR__ . '/vendor/autoload.php');
+            $api_instance = new Swagger\Client\Api\DefaultApi();
+            $login = login_example; // String | The phone number of the user in the following format [country code]-[phone number]
+            $password = password_example; // String | User password
+            $key = key_example; // String | BAASIS ID API KEY (from panel)
+            try {
+                $result = $api_instance->authBaasidLoginPost($login, $password, $key);
+                print_r($result);
+            } catch (Exception $e) {
+                echo 'Exception when calling DefaultApi->authBaasidLoginPost: ', $e->getMessage(), PHP_EOL;
+            }
+            ?>
+        - lang: Perl
+          source: |
+            use Data::Dumper;
+            use WWW::SwaggerClient::Configuration;
+            use WWW::SwaggerClient::DefaultApi;
+            my $api_instance = WWW::SwaggerClient::DefaultApi->new();
+            my $login = login_example; # String | The phone number of the user in the following format [country code]-[phone number]
+            my $password = password_example; # String | User password
+            my $key = key_example; # String | BAASIS ID API KEY (from panel)
+            eval { 
+                my $result = $api_instance->authBaasidLoginPost(login => $login, password => $password, key => $key);
+                print Dumper($result);
+            };
+            if ($@) {
+                warn "Exception when calling DefaultApi->authBaasidLoginPost: $@\n";
+            }
+        - lang: Python
+          source: |
+            from __future__ import print_statement
+            import time
+            import swagger_client
+            from swagger_client.rest import ApiException
+            from pprint import pprint
+            # create an instance of the API class
+            api_instance = swagger_client.DefaultApi()
+            login = login_example # String | The phone number of the user in the following format [country code]-[phone number]
+            password = password_example # String | User password
+            key = key_example # String | BAASIS ID API KEY (from panel)
+            try: 
+                # API Authorization
+                api_response = api_instance.auth_baasid_login_post(login, password, key)
+                pprint(api_response)
+            except ApiException as e:
+                print("Exception when calling DefaultApi->authBaasidLoginPost: %s\n" % e)
   /auth/send-form:
     post:
+      tags:
+        - auth
       summary: Registration start - send basic data
       description: >-
         The first step of registering a new user, sending basic data about user
         to server
+      operationId: send-form
       parameters:
         - name: key
           in: query
@@ -434,10 +604,286 @@ paths:
           description: >-
             Internal Server Error - problem with processing data on server.
             Please, contact with support team - support@baasisid.com
+      x-code-samples:
+        - lang: Curl
+          source: |
+            curl \
+                -H "Content-Type: application/json" \
+                -X POST -d '{"key": "BAASISID_API_KEY", "first_name": "John", "last_name": "Doe", "middle_name": "", "email": "johndoe777@testdemo.com", "phone": "79998885566", "phone2": "", "gender": 1, "birthday_day": "12", "birthday_month": "10", "birthday_year": "1980", "country_nationality": "sg"}' \
+                https://api.baasisid.com/auth/send-form
+        - lang: Java
+          source: |
+            import io.swagger.client.*;
+            import io.swagger.client.auth.*;
+            import io.swagger.client.model.*;
+            import io.swagger.client.api.DefaultApi;
+            
+            import java.io.File;
+            import java.util.*;
+            
+            public class DefaultApiExample {
+            
+                public static void main(String[] args) {
+                    
+                    DefaultApi apiInstance = new DefaultApi();
+                    String key = key_example; // String | BAASIS ID API KEY (from panel)
+                    String firstName = firstName_example; // String | User first name
+                    String lastName = lastName_example; // String | User last name
+                    String email = email_example; // String | User e-mail address
+                    String phone = phone_example; // String | The phone number of the user in the following format [country code]-[phone number]
+                    BigDecimal gender = 3.4; // BigDecimal | Gender, 0 - male, 1 - female
+                    String birthdayDay = birthdayDay_example; // String | User birthday day (valid day number, 1-31)
+                    String birthdayMonth = birthdayMonth_example; // String | User birthday month number (1 - January .. 12 - December)
+                    String birthdayYear = birthdayYear_example; // String | User birthday year, valid year number, from 1917 to current year
+                    String countryNationality = countryNationality_example; // String | Country of citizenship, iso2 code
+                    String middleName = middleName_example; // String | User middle name
+                    String phone2 = phone2_example; // String | Additional phone number of the user in the following format [country code]-[phone number]
+                    try {
+                        inline_response_200_1 result = apiInstance.authSendFormPost(key, firstName, lastName, email, phone, gender, birthdayDay, birthdayMonth, birthdayYear, countryNationality, middleName, phone2);
+                        System.out.println(result);
+                    } catch (ApiException e) {
+                        System.err.println("Exception when calling DefaultApi#authSendFormPost");
+                        e.printStackTrace();
+                    }
+                }
+            }
+        - lang: Android
+          source: |
+            import io.swagger.client.api.DefaultApi;
+            
+            public class DefaultApiExample {
+            
+                public static void main(String[] args) {
+                    DefaultApi apiInstance = new DefaultApi();
+                    String key = key_example; // String | BAASIS ID API KEY (from panel)
+                    String firstName = firstName_example; // String | User first name
+                    String lastName = lastName_example; // String | User last name
+                    String email = email_example; // String | User e-mail address
+                    String phone = phone_example; // String | The phone number of the user in the following format [country code]-[phone number]
+                    BigDecimal gender = 3.4; // BigDecimal | Gender, 0 - male, 1 - female
+                    String birthdayDay = birthdayDay_example; // String | User birthday day (valid day number, 1-31)
+                    String birthdayMonth = birthdayMonth_example; // String | User birthday month number (1 - January .. 12 - December)
+                    String birthdayYear = birthdayYear_example; // String | User birthday year, valid year number, from 1917 to current year
+                    String countryNationality = countryNationality_example; // String | Country of citizenship, iso2 code
+                    String middleName = middleName_example; // String | User middle name
+                    String phone2 = phone2_example; // String | Additional phone number of the user in the following format [country code]-[phone number]
+                    try {
+                        inline_response_200_1 result = apiInstance.authSendFormPost(key, firstName, lastName, email, phone, gender, birthdayDay, birthdayMonth, birthdayYear, countryNationality, middleName, phone2);
+                        System.out.println(result);
+                    } catch (ApiException e) {
+                        System.err.println("Exception when calling DefaultApi#authSendFormPost");
+                        e.printStackTrace();
+                    }
+                }
+            }
+        - lang: Objective-C
+          source: |
+            String *key = key_example; // BAASIS ID API KEY (from panel)
+            String *firstName = firstName_example; // User first name
+            String *lastName = lastName_example; // User last name
+            String *email = email_example; // User e-mail address
+            String *phone = phone_example; // The phone number of the user in the following format [country code]-[phone number]
+            BigDecimal *gender = 3.4; // Gender, 0 - male, 1 - female
+            String *birthdayDay = birthdayDay_example; // User birthday day (valid day number, 1-31)
+            String *birthdayMonth = birthdayMonth_example; // User birthday month number (1 - January .. 12 - December)
+            String *birthdayYear = birthdayYear_example; // User birthday year, valid year number, from 1917 to current year
+            String *countryNationality = countryNationality_example; // Country of citizenship, iso2 code
+            String *middleName = middleName_example; // User middle name (optional)
+            String *phone2 = phone2_example; // Additional phone number of the user in the following format [country code]-[phone number] (optional)
+            
+            DefaultApi *apiInstance = [[DefaultApi alloc] init];
+            
+            // Registration start - send basic data
+            [apiInstance authSendFormPostWith:key
+                firstName:firstName
+                lastName:lastName
+                email:email
+                phone:phone
+                gender:gender
+                birthdayDay:birthdayDay
+                birthdayMonth:birthdayMonth
+                birthdayYear:birthdayYear
+                countryNationality:countryNationality
+                middleName:middleName
+                phone2:phone2
+                  completionHandler: ^(inline_response_200_1 output, NSError* error) {
+                                if (output) {
+                                    NSLog(@"%@", output);
+                                }
+                                if (error) {
+                                    NSLog(@"Error: %@", error);
+                                }
+                            }];
+        - lang: JavaScript
+          source: |
+            var BaasisIdApi = require('baasis_id_api');
+            
+            var api = new BaasisIdApi.DefaultApi()
+            
+            var key = key_example; // {String} BAASIS ID API KEY (from panel)
+            
+            var firstName = firstName_example; // {String} User first name
+            
+            var lastName = lastName_example; // {String} User last name
+            
+            var email = email_example; // {String} User e-mail address
+            
+            var phone = phone_example; // {String} The phone number of the user in the following format [country code]-[phone number]
+            
+            var gender = 3.4; // {BigDecimal} Gender, 0 - male, 1 - female
+            
+            var birthdayDay = birthdayDay_example; // {String} User birthday day (valid day number, 1-31)
+            
+            var birthdayMonth = birthdayMonth_example; // {String} User birthday month number (1 - January .. 12 - December)
+            
+            var birthdayYear = birthdayYear_example; // {String} User birthday year, valid year number, from 1917 to current year
+            
+            var countryNationality = countryNationality_example; // {String} Country of citizenship, iso2 code
+            
+            var opts = { 
+              'middleName': middleName_example, // {String} User middle name
+              'phone2': phone2_example // {String} Additional phone number of the user in the following format [country code]-[phone number]
+            };
+            
+            var callback = function(error, data, response) {
+              if (error) {
+                console.error(error);
+              } else {
+                console.log('API called successfully. Returned data: ' + data);
+              }
+            };
+            api.authSendFormPost(key, firstName, lastName, email, phone, gender, birthdayDay, birthdayMonth, birthdayYear, countryNationality, opts, callback);
+        - lang: C#
+          source: |
+            using System;
+            using System.Diagnostics;
+            using IO.Swagger.Api;
+            using IO.Swagger.Client;
+            using IO.Swagger.Model;
+            
+            namespace Example
+            {
+                public class authSendFormPostExample
+                {
+                    public void main()
+                    {
+                        
+                        var apiInstance = new DefaultApi();
+                        var key = key_example;  // String | BAASIS ID API KEY (from panel)
+                        var firstName = firstName_example;  // String | User first name
+                        var lastName = lastName_example;  // String | User last name
+                        var email = email_example;  // String | User e-mail address
+                        var phone = phone_example;  // String | The phone number of the user in the following format [country code]-[phone number]
+                        var gender = 3.4;  // BigDecimal | Gender, 0 - male, 1 - female
+                        var birthdayDay = birthdayDay_example;  // String | User birthday day (valid day number, 1-31)
+                        var birthdayMonth = birthdayMonth_example;  // String | User birthday month number (1 - January .. 12 - December)
+                        var birthdayYear = birthdayYear_example;  // String | User birthday year, valid year number, from 1917 to current year
+                        var countryNationality = countryNationality_example;  // String | Country of citizenship, iso2 code
+                        var middleName = middleName_example;  // String | User middle name (optional) 
+                        var phone2 = phone2_example;  // String | Additional phone number of the user in the following format [country code]-[phone number] (optional) 
+                        
+                        try
+                        {
+                            // Registration start - send basic data
+                            inline_response_200_1 result = apiInstance.authSendFormPost(key, firstName, lastName, email, phone, gender, birthdayDay, birthdayMonth, birthdayYear, countryNationality, middleName, phone2);
+                            Debug.WriteLine(result);
+                        }
+                        catch (Exception e)
+                        {
+                            Debug.Print("Exception when calling DefaultApi.authSendFormPost: " + e.Message );
+                        }
+                    }
+                }
+            }
+        - lang: PHP
+          source: |
+            <?php
+            require_once(__DIR__ . '/vendor/autoload.php');
+            
+            $api_instance = new Swagger\Client\Api\DefaultApi();
+            $key = key_example; // String | BAASIS ID API KEY (from panel)
+            $firstName = firstName_example; // String | User first name
+            $lastName = lastName_example; // String | User last name
+            $email = email_example; // String | User e-mail address
+            $phone = phone_example; // String | The phone number of the user in the following format [country code]-[phone number]
+            $gender = 3.4; // BigDecimal | Gender, 0 - male, 1 - female
+            $birthdayDay = birthdayDay_example; // String | User birthday day (valid day number, 1-31)
+            $birthdayMonth = birthdayMonth_example; // String | User birthday month number (1 - January .. 12 - December)
+            $birthdayYear = birthdayYear_example; // String | User birthday year, valid year number, from 1917 to current year
+            $countryNationality = countryNationality_example; // String | Country of citizenship, iso2 code
+            $middleName = middleName_example; // String | User middle name
+            $phone2 = phone2_example; // String | Additional phone number of the user in the following format [country code]-[phone number]
+            
+            try {
+                $result = $api_instance->authSendFormPost($key, $firstName, $lastName, $email, $phone, $gender, $birthdayDay, $birthdayMonth, $birthdayYear, $countryNationality, $middleName, $phone2);
+                print_r($result);
+            } catch (Exception $e) {
+                echo 'Exception when calling DefaultApi->authSendFormPost: ', $e->getMessage(), PHP_EOL;
+            }
+            ?>
+        - lang: Perl
+          source: |
+            use Data::Dumper;
+            use WWW::SwaggerClient::Configuration;
+            use WWW::SwaggerClient::DefaultApi;
+            
+            my $api_instance = WWW::SwaggerClient::DefaultApi->new();
+            my $key = key_example; # String | BAASIS ID API KEY (from panel)
+            my $firstName = firstName_example; # String | User first name
+            my $lastName = lastName_example; # String | User last name
+            my $email = email_example; # String | User e-mail address
+            my $phone = phone_example; # String | The phone number of the user in the following format [country code]-[phone number]
+            my $gender = 3.4; # BigDecimal | Gender, 0 - male, 1 - female
+            my $birthdayDay = birthdayDay_example; # String | User birthday day (valid day number, 1-31)
+            my $birthdayMonth = birthdayMonth_example; # String | User birthday month number (1 - January .. 12 - December)
+            my $birthdayYear = birthdayYear_example; # String | User birthday year, valid year number, from 1917 to current year
+            my $countryNationality = countryNationality_example; # String | Country of citizenship, iso2 code
+            my $middleName = middleName_example; # String | User middle name
+            my $phone2 = phone2_example; # String | Additional phone number of the user in the following format [country code]-[phone number]
+            
+            eval { 
+                my $result = $api_instance->authSendFormPost(key => $key, firstName => $firstName, lastName => $lastName, email => $email, phone => $phone, gender => $gender, birthdayDay => $birthdayDay, birthdayMonth => $birthdayMonth, birthdayYear => $birthdayYear, countryNationality => $countryNationality, middleName => $middleName, phone2 => $phone2);
+                print Dumper($result);
+            };
+            if ($@) {
+                warn "Exception when calling DefaultApi->authSendFormPost: $@\n";
+            }
+        - lang: Python
+          source: |
+            from __future__ import print_statement
+            import time
+            import swagger_client
+            from swagger_client.rest import ApiException
+            from pprint import pprint
+            
+            # create an instance of the API class
+            api_instance = swagger_client.DefaultApi()
+            key = key_example # String | BAASIS ID API KEY (from panel)
+            firstName = firstName_example # String | User first name
+            lastName = lastName_example # String | User last name
+            email = email_example # String | User e-mail address
+            phone = phone_example # String | The phone number of the user in the following format [country code]-[phone number]
+            gender = 3.4 # BigDecimal | Gender, 0 - male, 1 - female
+            birthdayDay = birthdayDay_example # String | User birthday day (valid day number, 1-31)
+            birthdayMonth = birthdayMonth_example # String | User birthday month number (1 - January .. 12 - December)
+            birthdayYear = birthdayYear_example # String | User birthday year, valid year number, from 1917 to current year
+            countryNationality = countryNationality_example # String | Country of citizenship, iso2 code
+            middleName = middleName_example # String | User middle name (optional)
+            phone2 = phone2_example # String | Additional phone number of the user in the following format [country code]-[phone number] (optional)
+            
+            try: 
+                # Registration start - send basic data
+                api_response = api_instance.auth_send_form_post(key, firstName, lastName, email, phone, gender, birthdayDay, birthdayMonth, birthdayYear, countryNationality, middleName=middleName, phone2=phone2)
+                pprint(api_response)
+            except ApiException as e:
+                print("Exception when calling DefaultApi->authSendFormPost: %s\n" % e)
   /auth/send-sms:
     post:
+      tags:
+        - auth
       summary: OTP sms request
       description: Sending SMS to the user to confirm a phone number
+      operationId: send-sms
       parameters:
         - name: user_hash
           in: query
@@ -488,10 +934,185 @@ paths:
           description: >-
             Internal Server Error - problem with processing data on server
             Please, contact with support team - support@baasisid.com
+      x-code-samples:
+        - lang: Curl
+          source: |
+            curl \
+                -H "Content-Type: application/json" \
+                -X POST -d '{"user_hash": "c3732a00d5e297ba5a83504dfe1f2cdb310d0f80", "check_id": 890}' \
+                https://api.baasisid.com/auth/send-sms
+        - lang: Java
+          source: |
+            import io.swagger.client.*;
+            import io.swagger.client.auth.*;
+            import io.swagger.client.model.*;
+            import io.swagger.client.api.DefaultApi;
+            
+            import java.io.File;
+            import java.util.*;
+            
+            public class DefaultApiExample {
+            
+                public static void main(String[] args) {
+                    
+                    DefaultApi apiInstance = new DefaultApi();
+                    String userHash = userHash_example; // String | User hash (received in the /send-form step)
+                    String checkId = checkId_example; // String | Unique registration ID (received in the /send form step)
+                    try {
+                        inline_response_200_2 result = apiInstance.authSendSmsPost(userHash, checkId);
+                        System.out.println(result);
+                    } catch (ApiException e) {
+                        System.err.println("Exception when calling DefaultApi#authSendSmsPost");
+                        e.printStackTrace();
+                    }
+                }
+            }
+        - lang: Android
+          source: |
+            import io.swagger.client.api.DefaultApi;
+            
+            public class DefaultApiExample {
+            
+                public static void main(String[] args) {
+                    DefaultApi apiInstance = new DefaultApi();
+                    String userHash = userHash_example; // String | User hash (received in the /send-form step)
+                    String checkId = checkId_example; // String | Unique registration ID (received in the /send form step)
+                    try {
+                        inline_response_200_2 result = apiInstance.authSendSmsPost(userHash, checkId);
+                        System.out.println(result);
+                    } catch (ApiException e) {
+                        System.err.println("Exception when calling DefaultApi#authSendSmsPost");
+                        e.printStackTrace();
+                    }
+                }
+            }
+        - lang: Objective-C
+          source: |
+            String *userHash = userHash_example; // User hash (received in the /send-form step)
+            String *checkId = checkId_example; // Unique registration ID (received in the /send form step)
+            
+            DefaultApi *apiInstance = [[DefaultApi alloc] init];
+            
+            // OTP sms request
+            [apiInstance authSendSmsPostWith:userHash
+                checkId:checkId
+                completionHandler: ^(inline_response_200_2 output, NSError* error) {
+                            if (output) {
+                                NSLog(@"%@", output);
+                            }
+                            if (error) {
+                                NSLog(@"Error: %@", error);
+                            }
+                        }];
+        - lang: JavaScript
+          source: |
+            var BaasisIdApi = require('baasis_id_api');
+            
+            var api = new BaasisIdApi.DefaultApi()
+            
+            var userHash = userHash_example; // {String} User hash (received in the /send-form step)
+            
+            var checkId = checkId_example; // {String} Unique registration ID (received in the /send form step)
+            
+            var callback = function(error, data, response) {
+              if (error) {
+                console.error(error);
+              } else {
+                console.log('API called successfully. Returned data: ' + data);
+              }
+            };
+            api.authSendSmsPost(userHash, checkId, callback);
+        - lang: C#
+          source: |
+            using System;
+            using System.Diagnostics;
+            using IO.Swagger.Api;
+            using IO.Swagger.Client;
+            using IO.Swagger.Model;
+            
+            namespace Example
+            {
+                public class authSendSmsPostExample
+                {
+                    public void main()
+                    {
+                        
+                        var apiInstance = new DefaultApi();
+                        var userHash = userHash_example;  // String | User hash (received in the /send-form step)
+                        var checkId = checkId_example;  // String | Unique registration ID (received in the /send form step)
+            
+                        try
+                        {
+                            // OTP sms request
+                            inline_response_200_2 result = apiInstance.authSendSmsPost(userHash, checkId);
+                            Debug.WriteLine(result);
+                        }
+                        catch (Exception e)
+                        {
+                            Debug.Print("Exception when calling DefaultApi.authSendSmsPost: " + e.Message );
+                        }
+                    }
+                }
+            }
+        - lang: PHP
+          source: |
+            <?php
+            require_once(__DIR__ . '/vendor/autoload.php');
+            
+            $api_instance = new Swagger\Client\Api\DefaultApi();
+            $userHash = userHash_example; // String | User hash (received in the /send-form step)
+            $checkId = checkId_example; // String | Unique registration ID (received in the /send form step)
+            
+            try {
+                $result = $api_instance->authSendSmsPost($userHash, $checkId);
+                print_r($result);
+            } catch (Exception $e) {
+                echo 'Exception when calling DefaultApi->authSendSmsPost: ', $e->getMessage(), PHP_EOL;
+            }
+            ?>
+        - lang: Perl
+          source: |
+            use Data::Dumper;
+            use WWW::SwaggerClient::Configuration;
+            use WWW::SwaggerClient::DefaultApi;
+            
+            my $api_instance = WWW::SwaggerClient::DefaultApi->new();
+            my $userHash = userHash_example; # String | User hash (received in the /send-form step)
+            my $checkId = checkId_example; # String | Unique registration ID (received in the /send form step)
+            
+            eval { 
+                my $result = $api_instance->authSendSmsPost(userHash => $userHash, checkId => $checkId);
+                print Dumper($result);
+            };
+            if ($@) {
+                warn "Exception when calling DefaultApi->authSendSmsPost: $@\n";
+            }
+        - lang: Python
+          source: |
+            from __future__ import print_statement
+            import time
+            import swagger_client
+            from swagger_client.rest import ApiException
+            from pprint import pprint
+            
+            # create an instance of the API class
+            api_instance = swagger_client.DefaultApi()
+            userHash = userHash_example # String | User hash (received in the /send-form step)
+            checkId = checkId_example # String | Unique registration ID (received in the /send form step)
+            
+            try: 
+                # OTP sms request
+                api_response = api_instance.auth_send_sms_post(userHash, checkId)
+                pprint(api_response)
+            except ApiException as e:
+                print("Exception when calling DefaultApi->authSendSmsPost: %s\n" % e)
   /auth/check-sms-code:
     post:
+      tags:
+        - auth
       summary: Checking the OTP (SMS) code
       description: OTP (SMS) code checking
+      operationId: check-sms-code
       parameters:
         - name: user_hash
           in: query
@@ -557,12 +1178,207 @@ paths:
           description: >-
             Internal Server Error - problem with processing data on server
             Please, contact with support team - support@baasisid.com
+      x-code-samples:
+        - lang: Curl
+          source: |
+            curl \
+                -H "Content-Type: application/json" \
+                -X POST -d '{"user_hash": "c3732a00d5e297ba5a83504dfe1f2cdb310d0f80", "check_id": 890, "phone": "1-2345678900", "code": "5555"}' \
+                https://api.baasisid.com/auth/check-sms-code
+        - lang: Java
+          source: |
+            import io.swagger.client.*;
+            import io.swagger.client.auth.*;
+            import io.swagger.client.model.*;
+            import io.swagger.client.api.DefaultApi;
+            
+            import java.io.File;
+            import java.util.*;
+            
+            public class DefaultApiExample {
+            
+                public static void main(String[] args) {
+                    
+                    DefaultApi apiInstance = new DefaultApi();
+                    String userHash = userHash_example; // String | User hash (received in the /send-form step)
+                    String checkId = checkId_example; // String | User registration ID (received in the /send-form step)
+                    String phone = phone_example; // String | The phone number of the user in the following format [country code]-[phone number]
+                    String code = code_example; // String | Verification code (OTP code) received in SMS
+                    try {
+                        inline_response_200_2 result = apiInstance.authCheckSmsCodePost(userHash, checkId, phone, code);
+                        System.out.println(result);
+                    } catch (ApiException e) {
+                        System.err.println("Exception when calling DefaultApi#authCheckSmsCodePost");
+                        e.printStackTrace();
+                    }
+                }
+            }
+        - lang: Android
+          source: |
+            import io.swagger.client.api.DefaultApi;
+            
+            public class DefaultApiExample {
+            
+                public static void main(String[] args) {
+                    DefaultApi apiInstance = new DefaultApi();
+                    String userHash = userHash_example; // String | User hash (received in the /send-form step)
+                    String checkId = checkId_example; // String | User registration ID (received in the /send-form step)
+                    String phone = phone_example; // String | The phone number of the user in the following format [country code]-[phone number]
+                    String code = code_example; // String | Verification code (OTP code) received in SMS
+                    try {
+                        inline_response_200_2 result = apiInstance.authCheckSmsCodePost(userHash, checkId, phone, code);
+                        System.out.println(result);
+                    } catch (ApiException e) {
+                        System.err.println("Exception when calling DefaultApi#authCheckSmsCodePost");
+                        e.printStackTrace();
+                    }
+                }
+            }
+        - lang: Objective-C
+          source: |
+            String *userHash = userHash_example; // User hash (received in the /send-form step)
+            String *checkId = checkId_example; // User registration ID (received in the /send-form step)
+            String *phone = phone_example; // The phone number of the user in the following format [country code]-[phone number]
+            String *code = code_example; // Verification code (OTP code) received in SMS
+            
+            DefaultApi *apiInstance = [[DefaultApi alloc] init];
+            
+            // Checking the OTP (SMS) code
+            [apiInstance authCheckSmsCodePostWith:userHash
+                checkId:checkId
+                phone:phone
+                code:code
+                  completionHandler: ^(inline_response_200_2 output, NSError* error) {
+                                if (output) {
+                                    NSLog(@"%@", output);
+                                }
+                                if (error) {
+                                    NSLog(@"Error: %@", error);
+                                }
+                            }];
+        - lang: JavaScript
+          source: |
+            var BaasisIdApi = require('baasis_id_api');
+            
+            var api = new BaasisIdApi.DefaultApi()
+            
+            var userHash = userHash_example; // {String} User hash (received in the /send-form step)
+            
+            var checkId = checkId_example; // {String} User registration ID (received in the /send-form step)
+            
+            var phone = phone_example; // {String} The phone number of the user in the following format [country code]-[phone number]
+            
+            var code = code_example; // {String} Verification code (OTP code) received in SMS
+            
+            var callback = function(error, data, response) {
+              if (error) {
+                console.error(error);
+              } else {
+                console.log('API called successfully. Returned data: ' + data);
+              }
+            };
+            api.authCheckSmsCodePost(userHash, checkId, phone, code, callback);
+        - lang: C#
+          source: |
+            using System;
+            using System.Diagnostics;
+            using IO.Swagger.Api;
+            using IO.Swagger.Client;
+            using IO.Swagger.Model;
+            
+            namespace Example
+            {
+                public class authCheckSmsCodePostExample
+                {
+                    public void main()
+                    {
+                        
+                        var apiInstance = new DefaultApi();
+                        var userHash = userHash_example;  // String | User hash (received in the /send-form step)
+                        var checkId = checkId_example;  // String | User registration ID (received in the /send-form step)
+                        var phone = phone_example;  // String | The phone number of the user in the following format [country code]-[phone number]
+                        var code = code_example;  // String | Verification code (OTP code) received in SMS
+            
+                        try
+                        {
+                            // Checking the OTP (SMS) code
+                            inline_response_200_2 result = apiInstance.authCheckSmsCodePost(userHash, checkId, phone, code);
+                            Debug.WriteLine(result);
+                        }
+                        catch (Exception e)
+                        {
+                            Debug.Print("Exception when calling DefaultApi.authCheckSmsCodePost: " + e.Message );
+                        }
+                    }
+                }
+            }
+        - lang: PHP
+          source: |
+            <?php
+            require_once(__DIR__ . '/vendor/autoload.php');
+            
+            $api_instance = new Swagger\Client\Api\DefaultApi();
+            $userHash = userHash_example; // String | User hash (received in the /send-form step)
+            $checkId = checkId_example; // String | User registration ID (received in the /send-form step)
+            $phone = phone_example; // String | The phone number of the user in the following format [country code]-[phone number]
+            $code = code_example; // String | Verification code (OTP code) received in SMS
+            
+            try {
+                $result = $api_instance->authCheckSmsCodePost($userHash, $checkId, $phone, $code);
+                print_r($result);
+            } catch (Exception $e) {
+                echo 'Exception when calling DefaultApi->authCheckSmsCodePost: ', $e->getMessage(), PHP_EOL;
+            }
+            ?>
+        - lang: Perl
+          source: |
+            use Data::Dumper;
+            use WWW::SwaggerClient::Configuration;
+            use WWW::SwaggerClient::DefaultApi;
+            
+            my $api_instance = WWW::SwaggerClient::DefaultApi->new();
+            my $userHash = userHash_example; # String | User hash (received in the /send-form step)
+            my $checkId = checkId_example; # String | User registration ID (received in the /send-form step)
+            my $phone = phone_example; # String | The phone number of the user in the following format [country code]-[phone number]
+            my $code = code_example; # String | Verification code (OTP code) received in SMS
+            
+            eval { 
+                my $result = $api_instance->authCheckSmsCodePost(userHash => $userHash, checkId => $checkId, phone => $phone, code => $code);
+                print Dumper($result);
+            };
+            if ($@) {
+                warn "Exception when calling DefaultApi->authCheckSmsCodePost: $@\n";
+            }
+        - lang: Python
+          source: |
+            from __future__ import print_statement
+            import time
+            import swagger_client
+            from swagger_client.rest import ApiException
+            from pprint import pprint
+            
+            # create an instance of the API class
+            api_instance = swagger_client.DefaultApi()
+            userHash = userHash_example # String | User hash (received in the /send-form step)
+            checkId = checkId_example # String | User registration ID (received in the /send-form step)
+            phone = phone_example # String | The phone number of the user in the following format [country code]-[phone number]
+            code = code_example # String | Verification code (OTP code) received in SMS
+            
+            try: 
+                # Checking the OTP (SMS) code
+                api_response = api_instance.auth_check_sms_code_post(userHash, checkId, phone, code)
+                pprint(api_response)
+            except ApiException as e:
+                print("Exception when calling DefaultApi->authCheckSmsCodePost: %s\n" % e)
   /auth/check-card:
     post:
+      tags:
+        - auth
       summary: Debit/Credit card verification
       description: >-
         System withdraw a random amount to $1 and refund immediately. We do not
         store any card details.
+      operationId: check-card
       parameters:
         - name: user_hash
           in: query
@@ -634,10 +1450,235 @@ paths:
           description: >-
             Internal Server Error - problem with processing data on server
             Please, contact with support team - support@baasisid.com
+      x-code-samples:
+        - lang: Curl
+          source: |
+            curl \
+                -H "Content-Type: application/json" \
+                -X POST -d '{"user_hash": "c3732a00d5e297ba5a83504dfe1f2cdb310d0f80", "check_id": 890, "number": "4242424242424242", "cvc": "123", "month": "12", "year": "2018", "holder": "John Doe"}' \
+                https://api.baasisid.com/auth/check-card
+        - lang: Java
+          source: |
+            import io.swagger.client.*;
+            import io.swagger.client.auth.*;
+            import io.swagger.client.model.*;
+            import io.swagger.client.api.DefaultApi;
+            
+            import java.io.File;
+            import java.util.*;
+            
+            public class DefaultApiExample {
+            
+                public static void main(String[] args) {
+                    
+                    DefaultApi apiInstance = new DefaultApi();
+                    String userHash = userHash_example; // String | Hash пользователя
+                    String checkId = checkId_example; // String | User registration ID (received in the /send-form step)
+                    String number = number_example; // String | Card number without spaces and delimiters, only digits
+                    String cvc = cvc_example; // String | cvv code
+                    String month = month_example; // String | Card expiration month
+                    String year = year_example; // String | Card expiration year
+                    String holder = holder_example; // String | Cardholder name
+                    try {
+                        inline_response_200_3 result = apiInstance.authCheckCardPost(userHash, checkId, number, cvc, month, year, holder);
+                        System.out.println(result);
+                    } catch (ApiException e) {
+                        System.err.println("Exception when calling DefaultApi#authCheckCardPost");
+                        e.printStackTrace();
+                    }
+                }
+            }
+        - lang: Android
+          source: |
+            import io.swagger.client.api.DefaultApi;
+            
+            public class DefaultApiExample {
+            
+                public static void main(String[] args) {
+                    DefaultApi apiInstance = new DefaultApi();
+                    String userHash = userHash_example; // String | Hash пользователя
+                    String checkId = checkId_example; // String | User registration ID (received in the /send-form step)
+                    String number = number_example; // String | Card number without spaces and delimiters, only digits
+                    String cvc = cvc_example; // String | cvv code
+                    String month = month_example; // String | Card expiration month
+                    String year = year_example; // String | Card expiration year
+                    String holder = holder_example; // String | Cardholder name
+                    try {
+                        inline_response_200_3 result = apiInstance.authCheckCardPost(userHash, checkId, number, cvc, month, year, holder);
+                        System.out.println(result);
+                    } catch (ApiException e) {
+                        System.err.println("Exception when calling DefaultApi#authCheckCardPost");
+                        e.printStackTrace();
+                    }
+                }
+            }
+        - lang: Objective-C
+          source: |
+            String *userHash = userHash_example; // Hash пользователя
+            String *checkId = checkId_example; // User registration ID (received in the /send-form step)
+            String *number = number_example; // Card number without spaces and delimiters, only digits
+            String *cvc = cvc_example; // cvv code
+            String *month = month_example; // Card expiration month
+            String *year = year_example; // Card expiration year
+            String *holder = holder_example; // Cardholder name
+            
+            DefaultApi *apiInstance = [[DefaultApi alloc] init];
+            
+            // Debit/Credit card verification
+            [apiInstance authCheckCardPostWith:userHash
+                checkId:checkId
+                number:number
+                cvc:cvc
+                month:month
+                year:year
+                holder:holder
+                          completionHandler: ^(inline_response_200_3 output, NSError* error) {
+                                        if (output) {
+                                            NSLog(@"%@", output);
+                                        }
+                                        if (error) {
+                                            NSLog(@"Error: %@", error);
+                                        }
+                                    }];
+        - lang: JavaScript
+          source: |
+            var BaasisIdApi = require('baasis_id_api');
+            
+            var api = new BaasisIdApi.DefaultApi()
+            
+            var userHash = userHash_example; // {String} Hash пользователя
+            
+            var checkId = checkId_example; // {String} User registration ID (received in the /send-form step)
+            
+            var number = number_example; // {String} Card number without spaces and delimiters, only digits
+            
+            var cvc = cvc_example; // {String} cvv code
+            
+            var month = month_example; // {String} Card expiration month
+            
+            var year = year_example; // {String} Card expiration year
+            
+            var holder = holder_example; // {String} Cardholder name
+            
+            var callback = function(error, data, response) {
+              if (error) {
+                console.error(error);
+              } else {
+                console.log('API called successfully. Returned data: ' + data);
+              }
+            };
+            api.authCheckCardPost(userHash, checkId, number, cvc, month, year, holder, callback);
+        - lang: C#
+          source: |
+            using System;
+            using System.Diagnostics;
+            using IO.Swagger.Api;
+            using IO.Swagger.Client;
+            using IO.Swagger.Model;
+            
+            namespace Example
+            {
+                public class authCheckCardPostExample
+                {
+                    public void main()
+                    {
+                        
+                        var apiInstance = new DefaultApi();
+                        var userHash = userHash_example;  // String | Hash пользователя
+                        var checkId = checkId_example;  // String | User registration ID (received in the /send-form step)
+                        var number = number_example;  // String | Card number without spaces and delimiters, only digits
+                        var cvc = cvc_example;  // String | cvv code
+                        var month = month_example;  // String | Card expiration month
+                        var year = year_example;  // String | Card expiration year
+                        var holder = holder_example;  // String | Cardholder name
+            
+                        try
+                        {
+                            // Debit/Credit card verification
+                            inline_response_200_3 result = apiInstance.authCheckCardPost(userHash, checkId, number, cvc, month, year, holder);
+                            Debug.WriteLine(result);
+                        }
+                        catch (Exception e)
+                        {
+                            Debug.Print("Exception when calling DefaultApi.authCheckCardPost: " + e.Message );
+                        }
+                    }
+                }
+            }
+        - lang: PHP
+          source: |
+            <?php
+            require_once(__DIR__ . '/vendor/autoload.php');
+            
+            $api_instance = new Swagger\Client\Api\DefaultApi();
+            $userHash = userHash_example; // String | Hash пользователя
+            $checkId = checkId_example; // String | User registration ID (received in the /send-form step)
+            $number = number_example; // String | Card number without spaces and delimiters, only digits
+            $cvc = cvc_example; // String | cvv code
+            $month = month_example; // String | Card expiration month
+            $year = year_example; // String | Card expiration year
+            $holder = holder_example; // String | Cardholder name
+            
+            try {
+                $result = $api_instance->authCheckCardPost($userHash, $checkId, $number, $cvc, $month, $year, $holder);
+                print_r($result);
+            } catch (Exception $e) {
+                echo 'Exception when calling DefaultApi->authCheckCardPost: ', $e->getMessage(), PHP_EOL;
+            }
+            ?>
+        - lang: Perl
+          source: |
+            use Data::Dumper;
+            use WWW::SwaggerClient::Configuration;
+            use WWW::SwaggerClient::DefaultApi;
+            
+            my $api_instance = WWW::SwaggerClient::DefaultApi->new();
+            my $userHash = userHash_example; # String | Hash пользователя
+            my $checkId = checkId_example; # String | User registration ID (received in the /send-form step)
+            my $number = number_example; # String | Card number without spaces and delimiters, only digits
+            my $cvc = cvc_example; # String | cvv code
+            my $month = month_example; # String | Card expiration month
+            my $year = year_example; # String | Card expiration year
+            my $holder = holder_example; # String | Cardholder name
+            
+            eval { 
+                my $result = $api_instance->authCheckCardPost(userHash => $userHash, checkId => $checkId, number => $number, cvc => $cvc, month => $month, year => $year, holder => $holder);
+                print Dumper($result);
+            };
+            if ($@) {
+                warn "Exception when calling DefaultApi->authCheckCardPost: $@\n";
+            }
+        - lang: Python
+          source: |
+            from __future__ import print_statement
+            import time
+            import swagger_client
+            from swagger_client.rest import ApiException
+            from pprint import pprint
+            
+            # create an instance of the API class
+            api_instance = swagger_client.DefaultApi()
+            userHash = userHash_example # String | Hash пользователя
+            checkId = checkId_example # String | User registration ID (received in the /send-form step)
+            number = number_example # String | Card number without spaces and delimiters, only digits
+            cvc = cvc_example # String | cvv code
+            month = month_example # String | Card expiration month
+            year = year_example # String | Card expiration year
+            holder = holder_example # String | Cardholder name
+            
+            try: 
+                # Debit/Credit card verification
+                api_response = api_instance.auth_check_card_post(userHash, checkId, number, cvc, month, year, holder)
+                pprint(api_response)
+            except ApiException as e:
+                print("Exception when calling DefaultApi->authCheckCardPost: %s\n" % e)
   /auth/send-document:
     post:
+      tags:
+        - auth
       summary: Upload documents to server
       description: Upload user passport or ID card (2 side photo) on the server
+      operationId: send-document
       consumes:
         - multipart/form-data
       parameters:
@@ -687,10 +1728,209 @@ paths:
           description: >-
             Internal Server Error - problem with processing data on server.
             Please, contact with support team - support@baasisid.com
+      x-code-samples:
+        - lang: Curl
+          source: |
+            curl \
+              -F "user_hash=c3732a00d5e297ba5a83504dfe1f2cdb310d0f80" \
+              -F "check_id=890" \
+              -F "step=1" \
+              -F "file=@/path/to/img.jpg" \
+            https://api.baasisid.com/auth/send-document
+        - lang: Java
+          source: |
+            import io.swagger.client.*;
+            import io.swagger.client.auth.*;
+            import io.swagger.client.model.*;
+            import io.swagger.client.api.DefaultApi;
+            
+            import java.io.File;
+            import java.util.*;
+            
+            public class DefaultApiExample {
+            
+                public static void main(String[] args) {
+                    
+                    DefaultApi apiInstance = new DefaultApi();
+                    String userHash = userHash_example; // String | User hash
+                    String checkId = checkId_example; // String | User registration ID (received in the /send-form step)
+                    File file = /path/to/file.txt; // File | Image file
+                    BigDecimal step = 3.4; // BigDecimal | Document side numeration. "1" by default. For second side of ID card specify "2".
+                    try {
+                        inline_response_200_4 result = apiInstance.authSendDocumentPost(userHash, checkId, file, step);
+                        System.out.println(result);
+                    } catch (ApiException e) {
+                        System.err.println("Exception when calling DefaultApi#authSendDocumentPost");
+                        e.printStackTrace();
+                    }
+                }
+            }
+        - lang: Android
+          source: |
+            import io.swagger.client.api.DefaultApi;
+            
+            public class DefaultApiExample {
+            
+                public static void main(String[] args) {
+                    DefaultApi apiInstance = new DefaultApi();
+                    String userHash = userHash_example; // String | User hash
+                    String checkId = checkId_example; // String | User registration ID (received in the /send-form step)
+                    File file = /path/to/file.txt; // File | Image file
+                    BigDecimal step = 3.4; // BigDecimal | Document side numeration. "1" by default. For second side of ID card specify "2".
+                    try {
+                        inline_response_200_4 result = apiInstance.authSendDocumentPost(userHash, checkId, file, step);
+                        System.out.println(result);
+                    } catch (ApiException e) {
+                        System.err.println("Exception when calling DefaultApi#authSendDocumentPost");
+                        e.printStackTrace();
+                    }
+                }
+            }
+        - lang: Objective-C
+          source: |
+            String *userHash = userHash_example; // User hash
+            String *checkId = checkId_example; // User registration ID (received in the /send-form step)
+            File *file = /path/to/file.txt; // Image file
+            BigDecimal *step = 3.4; // Document side numeration. "1" by default. For second side of ID card specify "2". (optional)
+            
+            DefaultApi *apiInstance = [[DefaultApi alloc] init];
+            
+            // Upload documents to server
+            [apiInstance authSendDocumentPostWith:userHash
+                checkId:checkId
+                file:file
+                step:step
+                          completionHandler: ^(inline_response_200_4 output, NSError* error) {
+                                        if (output) {
+                                            NSLog(@"%@", output);
+                                        }
+                                        if (error) {
+                                            NSLog(@"Error: %@", error);
+                                        }
+                                    }];
+        - lang: JavaScript
+          source: |
+            var BaasisIdApi = require('baasis_id_api');
+            
+            var api = new BaasisIdApi.DefaultApi()
+            
+            var userHash = userHash_example; // {String} User hash
+            
+            var checkId = checkId_example; // {String} User registration ID (received in the /send-form step)
+            
+            var file = /path/to/file.txt; // {File} Image file
+            
+            var opts = { 
+              'step': 3.4 // {BigDecimal} Document side numeration. "1" by default. For second side of ID card specify "2".
+            };
+            
+            var callback = function(error, data, response) {
+              if (error) {
+                console.error(error);
+              } else {
+                console.log('API called successfully. Returned data: ' + data);
+              }
+            };
+            api.authSendDocumentPost(userHash, checkId, file, opts, callback);
+        - lang: C#
+          source: |
+            using System;
+            using System.Diagnostics;
+            using IO.Swagger.Api;
+            using IO.Swagger.Client;
+            using IO.Swagger.Model;
+            
+            namespace Example
+            {
+                public class authSendDocumentPostExample
+                {
+                    public void main()
+                    {
+                        
+                        var apiInstance = new DefaultApi();
+                        var userHash = userHash_example;  // String | User hash
+                        var checkId = checkId_example;  // String | User registration ID (received in the /send-form step)
+                        var file = new File(); // File | Image file
+                        var step = 3.4;  // BigDecimal | Document side numeration. "1" by default. For second side of ID card specify "2". (optional) 
+            
+                        try
+                        {
+                            // Upload documents to server
+                            inline_response_200_4 result = apiInstance.authSendDocumentPost(userHash, checkId, file, step);
+                            Debug.WriteLine(result);
+                        }
+                        catch (Exception e)
+                        {
+                            Debug.Print("Exception when calling DefaultApi.authSendDocumentPost: " + e.Message );
+                        }
+                    }
+                }
+            }
+        - lang: PHP
+          source: |
+            <?php
+            require_once(__DIR__ . '/vendor/autoload.php');
+            
+            $api_instance = new Swagger\Client\Api\DefaultApi();
+            $userHash = userHash_example; // String | User hash
+            $checkId = checkId_example; // String | User registration ID (received in the /send-form step)
+            $file = /path/to/file.txt; // File | Image file
+            $step = 3.4; // BigDecimal | Document side numeration. "1" by default. For second side of ID card specify "2".
+            
+            try {
+                $result = $api_instance->authSendDocumentPost($userHash, $checkId, $file, $step);
+                print_r($result);
+            } catch (Exception $e) {
+                echo 'Exception when calling DefaultApi->authSendDocumentPost: ', $e->getMessage(), PHP_EOL;
+            }
+            ?>
+        - lang: Perl
+          source: |
+            use Data::Dumper;
+            use WWW::SwaggerClient::Configuration;
+            use WWW::SwaggerClient::DefaultApi;
+            
+            my $api_instance = WWW::SwaggerClient::DefaultApi->new();
+            my $userHash = userHash_example; # String | User hash
+            my $checkId = checkId_example; # String | User registration ID (received in the /send-form step)
+            my $file = /path/to/file.txt; # File | Image file
+            my $step = 3.4; # BigDecimal | Document side numeration. "1" by default. For second side of ID card specify "2".
+            
+            eval { 
+                my $result = $api_instance->authSendDocumentPost(userHash => $userHash, checkId => $checkId, file => $file, step => $step);
+                print Dumper($result);
+            };
+            if ($@) {
+                warn "Exception when calling DefaultApi->authSendDocumentPost: $@\n";
+            }
+        - lang: Python
+          source: |
+            from __future__ import print_statement
+            import time
+            import swagger_client
+            from swagger_client.rest import ApiException
+            from pprint import pprint
+            
+            # create an instance of the API class
+            api_instance = swagger_client.DefaultApi()
+            userHash = userHash_example # String | User hash
+            checkId = checkId_example # String | User registration ID (received in the /send-form step)
+            file = /path/to/file.txt # File | Image file
+            step = 3.4 # BigDecimal | Document side numeration. "1" by default. For second side of ID card specify "2". (optional)
+            
+            try: 
+                # Upload documents to server
+                api_response = api_instance.auth_send_document_post(userHash, checkId, file, step=step)
+                pprint(api_response)
+            except ApiException as e:
+                print("Exception when calling DefaultApi->authSendDocumentPost: %s\n" % e)
   /auth/send-statement:
     post:
+      tags:
+        - auth
       summary: Upload bank statement to server
       description: Upload bank statement on the server
+      operationId: send-statement
       consumes:
         - multipart/form-data
       parameters:
@@ -733,10 +1973,196 @@ paths:
           description: >-
             Internal Server Error - problem with processing data on server.
             Please, contact with support team - support@baasisid.com
+      x-code-samples:
+        - lang: Curl
+          source: |
+            curl \
+              -F "user_hash=c3732a00d5e297ba5a83504dfe1f2cdb310d0f80" \
+              -F "check_id=1013" \
+              -F "file=@/path/to/img.jpg" \
+            https://api.baasisid.com/auth/send-statment
+        - lang: Java
+          source: |
+            import io.swagger.client.*;
+            import io.swagger.client.auth.*;
+            import io.swagger.client.model.*;
+            import io.swagger.client.api.DefaultApi;
+            
+            import java.io.File;
+            import java.util.*;
+            
+            public class DefaultApiExample {
+            
+                public static void main(String[] args) {
+                    
+                    DefaultApi apiInstance = new DefaultApi();
+                    String userHash = userHash_example; // String | User hash
+                    String checkId = checkId_example; // String | User registration ID (received in the /send-form step)
+                    File file = /path/to/file.txt; // File | Image file
+                    try {
+                        inline_response_200_4 result = apiInstance.authSendStatementPost(userHash, checkId, file);
+                        System.out.println(result);
+                    } catch (ApiException e) {
+                        System.err.println("Exception when calling DefaultApi#authSendStatementPost");
+                        e.printStackTrace();
+                    }
+                }
+            }
+        - lang: Android
+          source: |
+            import io.swagger.client.api.DefaultApi;
+            
+            public class DefaultApiExample {
+            
+                public static void main(String[] args) {
+                    DefaultApi apiInstance = new DefaultApi();
+                    String userHash = userHash_example; // String | User hash
+                    String checkId = checkId_example; // String | User registration ID (received in the /send-form step)
+                    File file = /path/to/file.txt; // File | Image file
+                    try {
+                        inline_response_200_4 result = apiInstance.authSendStatementPost(userHash, checkId, file);
+                        System.out.println(result);
+                    } catch (ApiException e) {
+                        System.err.println("Exception when calling DefaultApi#authSendStatementPost");
+                        e.printStackTrace();
+                    }
+                }
+            }
+        - lang: Objective-C
+          source: |
+            String *userHash = userHash_example; // User hash
+            String *checkId = checkId_example; // User registration ID (received in the /send-form step)
+            File *file = /path/to/file.txt; // Image file
+            
+            DefaultApi *apiInstance = [[DefaultApi alloc] init];
+            
+            // Upload bank statement to server
+            [apiInstance authSendStatementPostWith:userHash
+                checkId:checkId
+                file:file
+                          completionHandler: ^(inline_response_200_4 output, NSError* error) {
+                                        if (output) {
+                                            NSLog(@"%@", output);
+                                        }
+                                        if (error) {
+                                            NSLog(@"Error: %@", error);
+                                        }
+                                    }];
+        - lang: JavaScript
+          source: |
+            var BaasisIdApi = require('baasis_id_api');
+            
+            var api = new BaasisIdApi.DefaultApi()
+            
+            var userHash = userHash_example; // {String} User hash
+            
+            var checkId = checkId_example; // {String} User registration ID (received in the /send-form step)
+            
+            var file = /path/to/file.txt; // {File} Image file
+            
+            var callback = function(error, data, response) {
+              if (error) {
+                console.error(error);
+              } else {
+                console.log('API called successfully. Returned data: ' + data);
+              }
+            };
+            api.authSendStatementPost(userHash, checkId, file, callback);
+        - lang: C#
+          source: |
+            using System;
+            using System.Diagnostics;
+            using IO.Swagger.Api;
+            using IO.Swagger.Client;
+            using IO.Swagger.Model;
+            
+            namespace Example
+            {
+                public class authSendStatementPostExample
+                {
+                    public void main()
+                    {
+                        
+                        var apiInstance = new DefaultApi();
+                        var userHash = userHash_example;  // String | User hash
+                        var checkId = checkId_example;  // String | User registration ID (received in the /send-form step)
+                        var file = new File(); // File | Image file
+            
+                        try
+                        {
+                            // Upload bank statement to server
+                            inline_response_200_4 result = apiInstance.authSendStatementPost(userHash, checkId, file);
+                            Debug.WriteLine(result);
+                        }
+                        catch (Exception e)
+                        {
+                            Debug.Print("Exception when calling DefaultApi.authSendStatementPost: " + e.Message );
+                        }
+                    }
+                }
+            }
+        - lang: PHP
+          source: |
+            <?php
+            require_once(__DIR__ . '/vendor/autoload.php');
+            
+            $api_instance = new Swagger\Client\Api\DefaultApi();
+            $userHash = userHash_example; // String | User hash
+            $checkId = checkId_example; // String | User registration ID (received in the /send-form step)
+            $file = /path/to/file.txt; // File | Image file
+            
+            try {
+                $result = $api_instance->authSendStatementPost($userHash, $checkId, $file);
+                print_r($result);
+            } catch (Exception $e) {
+                echo 'Exception when calling DefaultApi->authSendStatementPost: ', $e->getMessage(), PHP_EOL;
+            }
+            ?>
+        - lang: Perl
+          source: |
+            use Data::Dumper;
+            use WWW::SwaggerClient::Configuration;
+            use WWW::SwaggerClient::DefaultApi;
+            
+            my $api_instance = WWW::SwaggerClient::DefaultApi->new();
+            my $userHash = userHash_example; # String | User hash
+            my $checkId = checkId_example; # String | User registration ID (received in the /send-form step)
+            my $file = /path/to/file.txt; # File | Image file
+            
+            eval { 
+                my $result = $api_instance->authSendStatementPost(userHash => $userHash, checkId => $checkId, file => $file);
+                print Dumper($result);
+            };
+            if ($@) {
+                warn "Exception when calling DefaultApi->authSendStatementPost: $@\n";
+            }
+        - lang: Python
+          source: |
+            from __future__ import print_statement
+            import time
+            import swagger_client
+            from swagger_client.rest import ApiException
+            from pprint import pprint
+            
+            # create an instance of the API class
+            api_instance = swagger_client.DefaultApi()
+            userHash = userHash_example # String | User hash
+            checkId = checkId_example # String | User registration ID (received in the /send-form step)
+            file = /path/to/file.txt # File | Image file
+            
+            try: 
+                # Upload bank statement to server
+                api_response = api_instance.auth_send_statement_post(userHash, checkId, file)
+                pprint(api_response)
+            except ApiException as e:
+                print("Exception when calling DefaultApi->authSendStatementPost: %s\n" % e)
   /auth/send-video:
     post:
+      tags:
+        - auth
       summary: Upload video to server
       description: Upload user video to server
+      operationId: send-video
       consumes:
         - multipart/form-data
       parameters:
@@ -779,13 +2205,209 @@ paths:
           description: >-
             Internal Server Error - problem with processing data on server.
             Please, contact with support team - support@baasisid.com
+      x-code-samples:
+        - lang: Curl
+          source: |
+            curl \
+              -F "user_hash=c3732a00d5e297ba5a83504dfe1f2cdb310d0f80" \
+              -F "check_id=890" \
+              -F "file=@/path/to/mov.MOV" \
+            https://api.baasisid.com/auth/send-video
+        - lang: Java
+          source: |
+            import io.swagger.client.*;
+            import io.swagger.client.auth.*;
+            import io.swagger.client.model.*;
+            import io.swagger.client.api.DefaultApi;
+            
+            import java.io.File;
+            import java.util.*;
+            
+            public class DefaultApiExample {
+            
+                public static void main(String[] args) {
+                    
+                    DefaultApi apiInstance = new DefaultApi();
+                    String userHash = userHash_example; // String | User hash
+                    String checkId = checkId_example; // String | User registration ID (received in the /send-form step)
+                    File file = /path/to/file.txt; // File | Video recording file
+                    try {
+                        inline_response_200_4 result = apiInstance.authSendVideoPost(userHash, checkId, file);
+                        System.out.println(result);
+                    } catch (ApiException e) {
+                        System.err.println("Exception when calling DefaultApi#authSendVideoPost");
+                        e.printStackTrace();
+                    }
+                }
+            }
+        - lang: Android
+          source: |
+            import io.swagger.client.api.DefaultApi;
+            
+            public class DefaultApiExample {
+            
+                public static void main(String[] args) {
+                    DefaultApi apiInstance = new DefaultApi();
+                    String userHash = userHash_example; // String | User hash
+                    String checkId = checkId_example; // String | User registration ID (received in the /send-form step)
+                    File file = /path/to/file.txt; // File | Video recording file
+                    try {
+                        inline_response_200_4 result = apiInstance.authSendVideoPost(userHash, checkId, file);
+                        System.out.println(result);
+                    } catch (ApiException e) {
+                        System.err.println("Exception when calling DefaultApi#authSendVideoPost");
+                        e.printStackTrace();
+                    }
+                }
+            }
+        - lang: Objective-C
+          source: |
+            String *userHash = userHash_example; // User hash
+            String *checkId = checkId_example; // User registration ID (received in the /send-form step)
+            File *file = /path/to/file.txt; // Video recording file
+            
+            DefaultApi *apiInstance = [[DefaultApi alloc] init];
+            
+            // Upload video to server
+            [apiInstance authSendVideoPostWith:userHash
+                checkId:checkId
+                file:file
+                          completionHandler: ^(inline_response_200_4 output, NSError* error) {
+                                        if (output) {
+                                            NSLog(@"%@", output);
+                                        }
+                                        if (error) {
+                                            NSLog(@"Error: %@", error);
+                                        }
+                                    }];
+        - lang: JavaScript
+          source: |
+            var BaasisIdApi = require('baasis_id_api');
+            
+            var api = new BaasisIdApi.DefaultApi()
+            
+            var userHash = userHash_example; // {String} User hash
+            
+            var checkId = checkId_example; // {String} User registration ID (received in the /send-form step)
+            
+            var file = /path/to/file.txt; // {File} Video recording file
+            
+            var callback = function(error, data, response) {
+              if (error) {
+                console.error(error);
+              } else {
+                console.log('API called successfully. Returned data: ' + data);
+              }
+            };
+            api.authSendVideoPost(userHash, checkId, file, callback);
+        - lang: C#
+          source: |
+            using System;
+            using System.Diagnostics;
+            using IO.Swagger.Api;
+            using IO.Swagger.Client;
+            using IO.Swagger.Model;
+            
+            namespace Example
+            {
+                public class authSendVideoPostExample
+                {
+                    public void main()
+                    {
+                        
+                        var apiInstance = new DefaultApi();
+                        var userHash = userHash_example;  // String | User hash
+                        var checkId = checkId_example;  // String | User registration ID (received in the /send-form step)
+                        var file = new File(); // File | Video recording file
+            
+                        try
+                        {
+                            // Upload video to server
+                            inline_response_200_4 result = apiInstance.authSendVideoPost(userHash, checkId, file);
+                            Debug.WriteLine(result);
+                        }
+                        catch (Exception e)
+                        {
+                            Debug.Print("Exception when calling DefaultApi.authSendVideoPost: " + e.Message );
+                        }
+                    }
+                }
+            }
+        - lang: PHP
+          source: |
+            <?php
+            require_once(__DIR__ . '/vendor/autoload.php');
+            
+            $api_instance = new Swagger\Client\Api\DefaultApi();
+            $userHash = userHash_example; // String | User hash
+            $checkId = checkId_example; // String | User registration ID (received in the /send-form step)
+            $file = /path/to/file.txt; // File | Video recording file
+            
+            try {
+                $result = $api_instance->authSendVideoPost($userHash, $checkId, $file);
+                print_r($result);
+            } catch (Exception $e) {
+                echo 'Exception when calling DefaultApi->authSendVideoPost: ', $e->getMessage(), PHP_EOL;
+            }
+            ?>
+        - lang: Perl
+          source: |
+            use Data::Dumper;
+            use WWW::SwaggerClient::Configuration;
+            use WWW::SwaggerClient::DefaultApi;
+            
+            my $api_instance = WWW::SwaggerClient::DefaultApi->new();
+            my $userHash = userHash_example; # String | User hash
+            my $checkId = checkId_example; # String | User registration ID (received in the /send-form step)
+            my $file = /path/to/file.txt; # File | Video recording file
+            
+            eval { 
+                my $result = $api_instance->authSendVideoPost(userHash => $userHash, checkId => $checkId, file => $file);
+                print Dumper($result);
+            };
+            if ($@) {
+                warn "Exception when calling DefaultApi->authSendVideoPost: $@\n";
+            }
+        - lang: Python
+          source: |
+            from __future__ import print_statement
+            import time
+            import swagger_client
+            from swagger_client.rest import ApiException
+            from pprint import pprint
+            
+            # create an instance of the API class
+            api_instance = swagger_client.DefaultApi()
+            userHash = userHash_example # String | User hash
+            checkId = checkId_example # String | User registration ID (received in the /send-form step)
+            file = /path/to/file.txt # File | Video recording file
+            
+            try: 
+                # Upload video to server
+                api_response = api_instance.auth_send_video_post(userHash, checkId, file)
+                pprint(api_response)
+            except ApiException as e:
+                print("Exception when calling DefaultApi->authSendVideoPost: %s\n" % e)
   /auth/finish:
     post:
+      tags:
+        - auth
       summary: Completion of registration
       description: >-
         Completion of registration. Method to receive the user authorization
         data;
+      operationId: finish
       parameters:
+        - name: user_hash
+          in: query
+          required: true
+          type: string
+          description: User hash
+        - name: check_id
+          in: query
+          required: true
+          type: string
+          description: User registration ID (received in the /send-form step)
         - name: country_residence
           in: query
           required: false
@@ -951,31 +2573,375 @@ paths:
           description: >-
             Internal Server Error - problem with processing data on server.
             Please, contact with support team - support@baasisid.com
+      x-code-samples:
+        - lang: Curl
+          source: |
+            curl \
+                -H "Content-Type: application/json" \
+                -X POST -d '{"user_hash": "c3732a00d5e297ba5a83504dfe1f2cdb310d0f80", "check_id": 890, "country_residence": "SG", "city": "Singapore", "address": "First Street, 12-727", "zip": "12345"}' \
+                https://api.baasisid.com/auth/finish
+        - lang: Java
+          source: |
+            import io.swagger.client.*;
+            import io.swagger.client.auth.*;
+            import io.swagger.client.model.*;
+            import io.swagger.client.api.DefaultApi;
+            
+            import java.io.File;
+            import java.util.*;
+            
+            public class DefaultApiExample {
+            
+                public static void main(String[] args) {
+                    
+                    DefaultApi apiInstance = new DefaultApi();
+                    String countryResidence = countryResidence_example; // String | Country of residence, iso2 code
+                    String city = city_example; // String | City
+                    String address = address_example; // String | Address
+                    String address2 = address2_example; // String | Aditional address
+                    String zip = zip_example; // String | Index
+                    String fbId = fbId_example; // String | User ID in Facebook
+                    String fbFname = fbFname_example; // String | User name in Facebook
+                    String fbLname = fbLname_example; // String | User surname in Facebook
+                    String fbEmail = fbEmail_example; // String | User e-mail in Facebook
+                    String googleId = googleId_example; // String | User ID in Google
+                    String googleFname = googleFname_example; // String | User name in Google
+                    String googleLname = googleLname_example; // String | User surname in Google
+                    String googleEmail = googleEmail_example; // String | User e-mail in Google
+                    String twitterId = twitterId_example; // String | User ID in Twitter
+                    String twitterFname = twitterFname_example; // String | User name in Twitter
+                    String twitterLname = twitterLname_example; // String | User surname in Twitter
+                    String twitterNickname = twitterNickname_example; // String | User nickname in Twitter
+                    String linkedinId = linkedinId_example; // String | User ID in LinkedIn
+                    String linkedinFname = linkedinFname_example; // String | User name in LinkedIn
+                    String linkedinLname = linkedinLname_example; // String | User surname in LinkedIn
+                    String linkedinEmail = linkedinEmail_example; // String | User e-mail in LinkedIn
+                    try {
+                        inline_response_200_5 result = apiInstance.authFinishPost(countryResidence, city, address, address2, zip, fbId, fbFname, fbLname, fbEmail, googleId, googleFname, googleLname, googleEmail, twitterId, twitterFname, twitterLname, twitterNickname, linkedinId, linkedinFname, linkedinLname, linkedinEmail);
+                        System.out.println(result);
+                    } catch (ApiException e) {
+                        System.err.println("Exception when calling DefaultApi#authFinishPost");
+                        e.printStackTrace();
+                    }
+                }
+            }
+        - lang: Android
+          source: |
+            import io.swagger.client.api.DefaultApi;
+            
+            public class DefaultApiExample {
+            
+                public static void main(String[] args) {
+                    DefaultApi apiInstance = new DefaultApi();
+                    String countryResidence = countryResidence_example; // String | Country of residence, iso2 code
+                    String city = city_example; // String | City
+                    String address = address_example; // String | Address
+                    String address2 = address2_example; // String | Aditional address
+                    String zip = zip_example; // String | Index
+                    String fbId = fbId_example; // String | User ID in Facebook
+                    String fbFname = fbFname_example; // String | User name in Facebook
+                    String fbLname = fbLname_example; // String | User surname in Facebook
+                    String fbEmail = fbEmail_example; // String | User e-mail in Facebook
+                    String googleId = googleId_example; // String | User ID in Google
+                    String googleFname = googleFname_example; // String | User name in Google
+                    String googleLname = googleLname_example; // String | User surname in Google
+                    String googleEmail = googleEmail_example; // String | User e-mail in Google
+                    String twitterId = twitterId_example; // String | User ID in Twitter
+                    String twitterFname = twitterFname_example; // String | User name in Twitter
+                    String twitterLname = twitterLname_example; // String | User surname in Twitter
+                    String twitterNickname = twitterNickname_example; // String | User nickname in Twitter
+                    String linkedinId = linkedinId_example; // String | User ID in LinkedIn
+                    String linkedinFname = linkedinFname_example; // String | User name in LinkedIn
+                    String linkedinLname = linkedinLname_example; // String | User surname in LinkedIn
+                    String linkedinEmail = linkedinEmail_example; // String | User e-mail in LinkedIn
+                    try {
+                        inline_response_200_5 result = apiInstance.authFinishPost(countryResidence, city, address, address2, zip, fbId, fbFname, fbLname, fbEmail, googleId, googleFname, googleLname, googleEmail, twitterId, twitterFname, twitterLname, twitterNickname, linkedinId, linkedinFname, linkedinLname, linkedinEmail);
+                        System.out.println(result);
+                    } catch (ApiException e) {
+                        System.err.println("Exception when calling DefaultApi#authFinishPost");
+                        e.printStackTrace();
+                    }
+                }
+            }
+        - lang: Objective-C
+          source: |
+            String *countryResidence = countryResidence_example; // Country of residence, iso2 code (optional)
+            String *city = city_example; // City (optional)
+            String *address = address_example; // Address (optional)
+            String *address2 = address2_example; // Aditional address (optional)
+            String *zip = zip_example; // Index (optional)
+            String *fbId = fbId_example; // User ID in Facebook (optional)
+            String *fbFname = fbFname_example; // User name in Facebook (optional)
+            String *fbLname = fbLname_example; // User surname in Facebook (optional)
+            String *fbEmail = fbEmail_example; // User e-mail in Facebook (optional)
+            String *googleId = googleId_example; // User ID in Google (optional)
+            String *googleFname = googleFname_example; // User name in Google (optional)
+            String *googleLname = googleLname_example; // User surname in Google (optional)
+            String *googleEmail = googleEmail_example; // User e-mail in Google (optional)
+            String *twitterId = twitterId_example; // User ID in Twitter (optional)
+            String *twitterFname = twitterFname_example; // User name in Twitter (optional)
+            String *twitterLname = twitterLname_example; // User surname in Twitter (optional)
+            String *twitterNickname = twitterNickname_example; // User nickname in Twitter (optional)
+            String *linkedinId = linkedinId_example; // User ID in LinkedIn (optional)
+            String *linkedinFname = linkedinFname_example; // User name in LinkedIn (optional)
+            String *linkedinLname = linkedinLname_example; // User surname in LinkedIn (optional)
+            String *linkedinEmail = linkedinEmail_example; // User e-mail in LinkedIn (optional)
+            
+            DefaultApi *apiInstance = [[DefaultApi alloc] init];
+            
+            // Completion of registration
+            [apiInstance authFinishPostWith:countryResidence
+                city:city
+                address:address
+                address2:address2
+                zip:zip
+                fbId:fbId
+                fbFname:fbFname
+                fbLname:fbLname
+                fbEmail:fbEmail
+                googleId:googleId
+                googleFname:googleFname
+                googleLname:googleLname
+                googleEmail:googleEmail
+                twitterId:twitterId
+                twitterFname:twitterFname
+                twitterLname:twitterLname
+                twitterNickname:twitterNickname
+                linkedinId:linkedinId
+                linkedinFname:linkedinFname
+                linkedinLname:linkedinLname
+                linkedinEmail:linkedinEmail
+                          completionHandler: ^(inline_response_200_5 output, NSError* error) {
+                                        if (output) {
+                                            NSLog(@"%@", output);
+                                        }
+                                        if (error) {
+                                            NSLog(@"Error: %@", error);
+                                        }
+                                    }];
+        - lang: JavaScript
+          source: |
+            var BaasisIdApi = require('baasis_id_api');
+            
+            var api = new BaasisIdApi.DefaultApi()
+            
+            var opts = { 
+              'countryResidence': countryResidence_example, // {String} Country of residence, iso2 code
+              'city': city_example, // {String} City
+              'address': address_example, // {String} Address
+              'address2': address2_example, // {String} Aditional address
+              'zip': zip_example, // {String} Index
+              'fbId': fbId_example, // {String} User ID in Facebook
+              'fbFname': fbFname_example, // {String} User name in Facebook
+              'fbLname': fbLname_example, // {String} User surname in Facebook
+              'fbEmail': fbEmail_example, // {String} User e-mail in Facebook
+              'googleId': googleId_example, // {String} User ID in Google
+              'googleFname': googleFname_example, // {String} User name in Google
+              'googleLname': googleLname_example, // {String} User surname in Google
+              'googleEmail': googleEmail_example, // {String} User e-mail in Google
+              'twitterId': twitterId_example, // {String} User ID in Twitter
+              'twitterFname': twitterFname_example, // {String} User name in Twitter
+              'twitterLname': twitterLname_example, // {String} User surname in Twitter
+              'twitterNickname': twitterNickname_example, // {String} User nickname in Twitter
+              'linkedinId': linkedinId_example, // {String} User ID in LinkedIn
+              'linkedinFname': linkedinFname_example, // {String} User name in LinkedIn
+              'linkedinLname': linkedinLname_example, // {String} User surname in LinkedIn
+              'linkedinEmail': linkedinEmail_example // {String} User e-mail in LinkedIn
+            };
+            
+            var callback = function(error, data, response) {
+              if (error) {
+                console.error(error);
+              } else {
+                console.log('API called successfully. Returned data: ' + data);
+              }
+            };
+            api.authFinishPost(opts, callback);
+        - lang: C#
+          source: |
+            using System;
+            using System.Diagnostics;
+            using IO.Swagger.Api;
+            using IO.Swagger.Client;
+            using IO.Swagger.Model;
+            
+            namespace Example
+            {
+                public class authFinishPostExample
+                {
+                    public void main()
+                    {
+                        
+                        var apiInstance = new DefaultApi();
+                        var countryResidence = countryResidence_example;  // String | Country of residence, iso2 code (optional) 
+                        var city = city_example;  // String | City (optional) 
+                        var address = address_example;  // String | Address (optional) 
+                        var address2 = address2_example;  // String | Aditional address (optional) 
+                        var zip = zip_example;  // String | Index (optional) 
+                        var fbId = fbId_example;  // String | User ID in Facebook (optional) 
+                        var fbFname = fbFname_example;  // String | User name in Facebook (optional) 
+                        var fbLname = fbLname_example;  // String | User surname in Facebook (optional) 
+                        var fbEmail = fbEmail_example;  // String | User e-mail in Facebook (optional) 
+                        var googleId = googleId_example;  // String | User ID in Google (optional) 
+                        var googleFname = googleFname_example;  // String | User name in Google (optional) 
+                        var googleLname = googleLname_example;  // String | User surname in Google (optional) 
+                        var googleEmail = googleEmail_example;  // String | User e-mail in Google (optional) 
+                        var twitterId = twitterId_example;  // String | User ID in Twitter (optional) 
+                        var twitterFname = twitterFname_example;  // String | User name in Twitter (optional) 
+                        var twitterLname = twitterLname_example;  // String | User surname in Twitter (optional) 
+                        var twitterNickname = twitterNickname_example;  // String | User nickname in Twitter (optional) 
+                        var linkedinId = linkedinId_example;  // String | User ID in LinkedIn (optional) 
+                        var linkedinFname = linkedinFname_example;  // String | User name in LinkedIn (optional) 
+                        var linkedinLname = linkedinLname_example;  // String | User surname in LinkedIn (optional) 
+                        var linkedinEmail = linkedinEmail_example;  // String | User e-mail in LinkedIn (optional) 
+            
+                        try
+                        {
+                            // Completion of registration
+                            inline_response_200_5 result = apiInstance.authFinishPost(countryResidence, city, address, address2, zip, fbId, fbFname, fbLname, fbEmail, googleId, googleFname, googleLname, googleEmail, twitterId, twitterFname, twitterLname, twitterNickname, linkedinId, linkedinFname, linkedinLname, linkedinEmail);
+                            Debug.WriteLine(result);
+                        }
+                        catch (Exception e)
+                        {
+                            Debug.Print("Exception when calling DefaultApi.authFinishPost: " + e.Message );
+                        }
+                    }
+                }
+            }
+        - lang: PHP
+          source: |
+            <?php
+            require_once(__DIR__ . '/vendor/autoload.php');
+            
+            $api_instance = new Swagger\Client\Api\DefaultApi();
+            $countryResidence = countryResidence_example; // String | Country of residence, iso2 code
+            $city = city_example; // String | City
+            $address = address_example; // String | Address
+            $address2 = address2_example; // String | Aditional address
+            $zip = zip_example; // String | Index
+            $fbId = fbId_example; // String | User ID in Facebook
+            $fbFname = fbFname_example; // String | User name in Facebook
+            $fbLname = fbLname_example; // String | User surname in Facebook
+            $fbEmail = fbEmail_example; // String | User e-mail in Facebook
+            $googleId = googleId_example; // String | User ID in Google
+            $googleFname = googleFname_example; // String | User name in Google
+            $googleLname = googleLname_example; // String | User surname in Google
+            $googleEmail = googleEmail_example; // String | User e-mail in Google
+            $twitterId = twitterId_example; // String | User ID in Twitter
+            $twitterFname = twitterFname_example; // String | User name in Twitter
+            $twitterLname = twitterLname_example; // String | User surname in Twitter
+            $twitterNickname = twitterNickname_example; // String | User nickname in Twitter
+            $linkedinId = linkedinId_example; // String | User ID in LinkedIn
+            $linkedinFname = linkedinFname_example; // String | User name in LinkedIn
+            $linkedinLname = linkedinLname_example; // String | User surname in LinkedIn
+            $linkedinEmail = linkedinEmail_example; // String | User e-mail in LinkedIn
+            
+            try {
+                $result = $api_instance->authFinishPost($countryResidence, $city, $address, $address2, $zip, $fbId, $fbFname, $fbLname, $fbEmail, $googleId, $googleFname, $googleLname, $googleEmail, $twitterId, $twitterFname, $twitterLname, $twitterNickname, $linkedinId, $linkedinFname, $linkedinLname, $linkedinEmail);
+                print_r($result);
+            } catch (Exception $e) {
+                echo 'Exception when calling DefaultApi->authFinishPost: ', $e->getMessage(), PHP_EOL;
+            }
+            ?>
+        - lang: Perl
+          source: |
+            use Data::Dumper;
+            use WWW::SwaggerClient::Configuration;
+            use WWW::SwaggerClient::DefaultApi;
+            
+            my $api_instance = WWW::SwaggerClient::DefaultApi->new();
+            my $countryResidence = countryResidence_example; # String | Country of residence, iso2 code
+            my $city = city_example; # String | City
+            my $address = address_example; # String | Address
+            my $address2 = address2_example; # String | Aditional address
+            my $zip = zip_example; # String | Index
+            my $fbId = fbId_example; # String | User ID in Facebook
+            my $fbFname = fbFname_example; # String | User name in Facebook
+            my $fbLname = fbLname_example; # String | User surname in Facebook
+            my $fbEmail = fbEmail_example; # String | User e-mail in Facebook
+            my $googleId = googleId_example; # String | User ID in Google
+            my $googleFname = googleFname_example; # String | User name in Google
+            my $googleLname = googleLname_example; # String | User surname in Google
+            my $googleEmail = googleEmail_example; # String | User e-mail in Google
+            my $twitterId = twitterId_example; # String | User ID in Twitter
+            my $twitterFname = twitterFname_example; # String | User name in Twitter
+            my $twitterLname = twitterLname_example; # String | User surname in Twitter
+            my $twitterNickname = twitterNickname_example; # String | User nickname in Twitter
+            my $linkedinId = linkedinId_example; # String | User ID in LinkedIn
+            my $linkedinFname = linkedinFname_example; # String | User name in LinkedIn
+            my $linkedinLname = linkedinLname_example; # String | User surname in LinkedIn
+            my $linkedinEmail = linkedinEmail_example; # String | User e-mail in LinkedIn
+            
+            eval { 
+                my $result = $api_instance->authFinishPost(countryResidence => $countryResidence, city => $city, address => $address, address2 => $address2, zip => $zip, fbId => $fbId, fbFname => $fbFname, fbLname => $fbLname, fbEmail => $fbEmail, googleId => $googleId, googleFname => $googleFname, googleLname => $googleLname, googleEmail => $googleEmail, twitterId => $twitterId, twitterFname => $twitterFname, twitterLname => $twitterLname, twitterNickname => $twitterNickname, linkedinId => $linkedinId, linkedinFname => $linkedinFname, linkedinLname => $linkedinLname, linkedinEmail => $linkedinEmail);
+                print Dumper($result);
+            };
+            if ($@) {
+                warn "Exception when calling DefaultApi->authFinishPost: $@\n";
+            }
+        - lang: Python
+          source: |
+            from __future__ import print_statement
+            import time
+            import swagger_client
+            from swagger_client.rest import ApiException
+            from pprint import pprint
+            
+            # create an instance of the API class
+            api_instance = swagger_client.DefaultApi()
+            countryResidence = countryResidence_example # String | Country of residence, iso2 code (optional)
+            city = city_example # String | City (optional)
+            address = address_example # String | Address (optional)
+            address2 = address2_example # String | Aditional address (optional)
+            zip = zip_example # String | Index (optional)
+            fbId = fbId_example # String | User ID in Facebook (optional)
+            fbFname = fbFname_example # String | User name in Facebook (optional)
+            fbLname = fbLname_example # String | User surname in Facebook (optional)
+            fbEmail = fbEmail_example # String | User e-mail in Facebook (optional)
+            googleId = googleId_example # String | User ID in Google (optional)
+            googleFname = googleFname_example # String | User name in Google (optional)
+            googleLname = googleLname_example # String | User surname in Google (optional)
+            googleEmail = googleEmail_example # String | User e-mail in Google (optional)
+            twitterId = twitterId_example # String | User ID in Twitter (optional)
+            twitterFname = twitterFname_example # String | User name in Twitter (optional)
+            twitterLname = twitterLname_example # String | User surname in Twitter (optional)
+            twitterNickname = twitterNickname_example # String | User nickname in Twitter (optional)
+            linkedinId = linkedinId_example # String | User ID in LinkedIn (optional)
+            linkedinFname = linkedinFname_example # String | User name in LinkedIn (optional)
+            linkedinLname = linkedinLname_example # String | User surname in LinkedIn (optional)
+            linkedinEmail = linkedinEmail_example # String | User e-mail in LinkedIn (optional)
+            
+            try: 
+                # Completion of registration
+                api_response = api_instance.auth_finish_post(countryResidence=countryResidence, city=city, address=address, address2=address2, zip=zip, fbId=fbId, fbFname=fbFname, fbLname=fbLname, fbEmail=fbEmail, googleId=googleId, googleFname=googleFname, googleLname=googleLname, googleEmail=googleEmail, twitterId=twitterId, twitterFname=twitterFname, twitterLname=twitterLname, twitterNickname=twitterNickname, linkedinId=linkedinId, linkedinFname=linkedinFname, linkedinLname=linkedinLname, linkedinEmail=linkedinEmail)
+                pprint(api_response)
+            except ApiException as e:
+                print("Exception when calling DefaultApi->authFinishPost: %s\n" % e)
   '/users/{user_hash}/{api_access_token}':
     post:
+      tags:
+        - users
       summary: Receiving user information and status validation
-      description: >-
+      description: |
         Receiving user information and status validation after registration /
         authorization.
-
+        
         The list of fields depends on the settings in the CRM
         dashboard.
-
-
+        
         The method is applicable ONLY to server-side.
         DO NOT SHARE the data with anyone and DO NOT GIVE AWAY in open format.
-
-
+        
         The result of request depends on the level of access requested by end-user. The access
         level is determined in the CRM settings. There are 3 methods of access:
-
+        
           1) Basic data: Name, surname, gender, country of citizenship, e-mail address.
-
+        
           2) Additional data: Name, surname, gender, country of citizenship, e-mail address, phone number, age, address details.
-
-
+        
           3) All data: Name, surname, gender, country of citizenship, e-mail address, phone number, age, address details, passport/id card data, credit card
             information (bank name, country of the issue), social networks data.
+      operationId: users
       parameters:
         - name: user_hash
           in: path
@@ -1122,3 +3088,472 @@ paths:
           description: >-
             Internal Server Error - problem with processing data on server
             Please, contact with support team - support@baasisid.com
+      x-code-samples:
+        - lang: Curl
+          source: |
+            curl \
+                -H "Content-Type: application/json" \
+                -X GET https://api.baasisid.com/users/b84caa8cb9097361b89509c7395be1e7f7743442/aat-d67b6cd3-7255-4203-b351-3bd26233dcc8?secret=BAASIS_API_SECRET1
+        - lang: Java
+          source: |
+            import io.swagger.client.*;
+            import io.swagger.client.auth.*;
+            import io.swagger.client.model.*;
+            import io.swagger.client.api.DefaultApi;
+            
+            import java.io.File;
+            import java.util.*;
+            
+            public class DefaultApiExample {
+            
+                public static void main(String[] args) {
+                    
+                    DefaultApi apiInstance = new DefaultApi();
+                    String userHash = userHash_example; // String | User hash ID, received after registration/authorization
+                    String apiAccessToken = apiAccessToken_example; // String | Token for API access, received after registration/authorization
+                    String secret = secret_example; // String | BAASIS ID SECRET1 - secret key, accessible in BAASIS ID CRM dashboard.
+                    try {
+                        inline_response_200_6 result = apiInstance.usersUserHashApiAccessTokenPost(userHash, apiAccessToken, secret);
+                        System.out.println(result);
+                    } catch (ApiException e) {
+                        System.err.println("Exception when calling DefaultApi#usersUserHashApiAccessTokenPost");
+                        e.printStackTrace();
+                    }
+                }
+            }
+        - lang: Android
+          source: |
+            import io.swagger.client.api.DefaultApi;
+            
+            public class DefaultApiExample {
+            
+                public static void main(String[] args) {
+                    DefaultApi apiInstance = new DefaultApi();
+                    String userHash = userHash_example; // String | User hash ID, received after registration/authorization
+                    String apiAccessToken = apiAccessToken_example; // String | Token for API access, received after registration/authorization
+                    String secret = secret_example; // String | BAASIS ID SECRET1 - secret key, accessible in BAASIS ID CRM dashboard.
+                    try {
+                        inline_response_200_6 result = apiInstance.usersUserHashApiAccessTokenPost(userHash, apiAccessToken, secret);
+                        System.out.println(result);
+                    } catch (ApiException e) {
+                        System.err.println("Exception when calling DefaultApi#usersUserHashApiAccessTokenPost");
+                        e.printStackTrace();
+                    }
+                }
+            }
+        - lang: Objective-C
+          source: |
+            String *userHash = userHash_example; // User hash ID, received after registration/authorization
+            String *apiAccessToken = apiAccessToken_example; // Token for API access, received after registration/authorization
+            String *secret = secret_example; // BAASIS ID SECRET1 - secret key, accessible in BAASIS ID CRM dashboard.
+            
+            DefaultApi *apiInstance = [[DefaultApi alloc] init];
+            
+            // Receiving user information and status validation
+            [apiInstance usersUserHashApiAccessTokenPostWith:userHash
+                apiAccessToken:apiAccessToken
+                secret:secret
+                          completionHandler: ^(inline_response_200_6 output, NSError* error) {
+                                        if (output) {
+                                            NSLog(@"%@", output);
+                                        }
+                                        if (error) {
+                                            NSLog(@"Error: %@", error);
+                                        }
+                                    }];
+        - lang: JavaScript
+          source: |
+            var BaasisIdApi = require('baasis_id_api');
+            
+            var api = new BaasisIdApi.DefaultApi()
+            
+            var userHash = userHash_example; // {String} User hash ID, received after registration/authorization
+            
+            var apiAccessToken = apiAccessToken_example; // {String} Token for API access, received after registration/authorization
+            
+            var secret = secret_example; // {String} BAASIS ID SECRET1 - secret key, accessible in BAASIS ID CRM dashboard.
+            
+            var callback = function(error, data, response) {
+              if (error) {
+                console.error(error);
+              } else {
+                console.log('API called successfully. Returned data: ' + data);
+              }
+            };
+            api.usersUserHashApiAccessTokenPost(userHash, apiAccessToken, secret, callback);
+        - lang: C#
+          source: |
+            using System;
+            using System.Diagnostics;
+            using IO.Swagger.Api;
+            using IO.Swagger.Client;
+            using IO.Swagger.Model;
+            
+            namespace Example
+            {
+                public class usersUserHashApiAccessTokenPostExample
+                {
+                    public void main()
+                    {
+                        
+                        var apiInstance = new DefaultApi();
+                        var userHash = userHash_example;  // String | User hash ID, received after registration/authorization
+                        var apiAccessToken = apiAccessToken_example;  // String | Token for API access, received after registration/authorization
+                        var secret = secret_example;  // String | BAASIS ID SECRET1 - secret key, accessible in BAASIS ID CRM dashboard.
+            
+                        try
+                        {
+                            // Receiving user information and status validation
+                            inline_response_200_6 result = apiInstance.usersUserHashApiAccessTokenPost(userHash, apiAccessToken, secret);
+                            Debug.WriteLine(result);
+                        }
+                        catch (Exception e)
+                        {
+                            Debug.Print("Exception when calling DefaultApi.usersUserHashApiAccessTokenPost: " + e.Message );
+                        }
+                    }
+                }
+            }
+        - lang: PHP
+          source: |
+            <?php
+            require_once(__DIR__ . '/vendor/autoload.php');
+            
+            $api_instance = new Swagger\Client\Api\DefaultApi();
+            $userHash = userHash_example; // String | User hash ID, received after registration/authorization
+            $apiAccessToken = apiAccessToken_example; // String | Token for API access, received after registration/authorization
+            $secret = secret_example; // String | BAASIS ID SECRET1 - secret key, accessible in BAASIS ID CRM dashboard.
+            
+            try {
+                $result = $api_instance->usersUserHashApiAccessTokenPost($userHash, $apiAccessToken, $secret);
+                print_r($result);
+            } catch (Exception $e) {
+                echo 'Exception when calling DefaultApi->usersUserHashApiAccessTokenPost: ', $e->getMessage(), PHP_EOL;
+            }
+            ?>
+        - lang: Perl
+          source: |
+            use Data::Dumper;
+            use WWW::SwaggerClient::Configuration;
+            use WWW::SwaggerClient::DefaultApi;
+            
+            my $api_instance = WWW::SwaggerClient::DefaultApi->new();
+            my $userHash = userHash_example; # String | User hash ID, received after registration/authorization
+            my $apiAccessToken = apiAccessToken_example; # String | Token for API access, received after registration/authorization
+            my $secret = secret_example; # String | BAASIS ID SECRET1 - secret key, accessible in BAASIS ID CRM dashboard.
+            
+            eval { 
+                my $result = $api_instance->usersUserHashApiAccessTokenPost(userHash => $userHash, apiAccessToken => $apiAccessToken, secret => $secret);
+                print Dumper($result);
+            };
+            if ($@) {
+                warn "Exception when calling DefaultApi->usersUserHashApiAccessTokenPost: $@\n";
+            }
+        - lang: Python
+          source: |
+            from __future__ import print_statement
+            import time
+            import swagger_client
+            from swagger_client.rest import ApiException
+            from pprint import pprint
+            
+            # create an instance of the API class
+            api_instance = swagger_client.DefaultApi()
+            userHash = userHash_example # String | User hash ID, received after registration/authorization
+            apiAccessToken = apiAccessToken_example # String | Token for API access, received after registration/authorization
+            secret = secret_example # String | BAASIS ID SECRET1 - secret key, accessible in BAASIS ID CRM dashboard.
+            
+            try: 
+                # Receiving user information and status validation
+                api_response = api_instance.users_user_hash_api_access_token_post(userHash, apiAccessToken, secret)
+                pprint(api_response)
+            except ApiException as e:
+                print("Exception when calling DefaultApi->usersUserHashApiAccessTokenPost: %s\n" % e)
+  '/users/refresh-access-token/{api_refresh_token}':
+    post:
+      tags:
+        - users
+      summary: Refresh user token
+      description: |
+        Refresh user token after expiration
+      operationId: users
+      parameters:
+        - name: api_refresh_token
+          in: path
+          required: true
+          type: string
+          description: 'refresh token, received after registration'
+      responses:
+        '200':
+          description: Status 200
+          schema:
+            required:
+              - status
+              - api_access_token
+              - api_refresh_token
+            type: object
+            properties:
+              status:
+                type: string
+                description: >
+                  Validation status. Values: ok, denied, not_found
+                example: ok
+              api_access_token:
+                type: string
+                description: >-
+                  Token to retrieve user data through a server-side API.
+                  Lifetime of the token is 60 minutes
+                example: aat-gewyTfImeRqsKXhgbdOYAfGNVigmaCfcpaANTJpu
+              api_refresh_token:
+                type: string
+                description: Token for updating user data through a server-side API
+                example: art-tqcJQSzbPHuFhHcIjVoOlMKuyntJoZJKGIzgNDgb
+              errors:
+                type: array
+                description: >-
+                  Error values (for status: bad)
+
+                    empty:user_hash - no user_hash
+
+                    empty:check_id - no check_id
+          examples:
+            application/json:
+              status: ok
+              api_access_token: aat-yJTccTTPMcBwhmuifKDiINndzqMbzLHmZqOZPGlw
+              api_refresh_token: art-AIzyhpLMnDpstCnAxjYaAYPKMWFIoRRYBZAxlmtY
+        '500':
+          description: >-
+            Internal Server Error - problem with processing data on server.
+            Please, contact with support team
+      x-code-samples:
+        - lang: Curl
+          source: |
+            curl \
+                -H "Content-Type: application/json" \
+                -X GET https://apiproxy_srv.datadepot.io/users/refresh-access-token/art-AIzyhpLMnDpstCnAxjYaAYPKMWFIoRRYBZAxlmtY
+
+  /auth/company:
+    post:
+      tags:
+        - companies
+      summary: Saving company information
+      description: |
+
+      operationId: company
+      parameters:
+        - name: key
+          in: query
+          required: true
+          type: string
+          description: 'BAASIS ID API KEY (from panel)'
+        - name: userHash
+          in: query
+          required: true
+          type: string
+          description: 'User hash ID, received after registration/authorization or auth/finish (user_hash)'
+        - name: authToken
+          in: query
+          required: true
+          type: string
+          description: 'Token for API access, received after registration/authorization or auth/finish (api_access_token)'
+        - name: name
+          in: query
+          required: true
+          type: string
+          description: 'Company name'
+        - name: dba
+          in: query
+          required: true
+          type: string
+          description: 'Doing Business As (DBA)'
+        - name: incDate
+          in: query
+          required: true
+          type: string
+          description: 'Incorporation Date (YYYY-MM-DD)'
+        - name: regNum
+          in: query
+          required: true
+          type: string
+          description: 'Registration Number'
+        - name: regCountry
+          in: query
+          required: true
+          type: string
+          description: 'Registration Address - Country, iso2 code'
+        - name: regCity
+          in: query
+          required: true
+          type: string
+          description: 'Registration Address - City'
+        - name: regZip
+          in: query
+          required: true
+          type: string
+          description: 'Registration Address - Zip/ Postal Code'
+        - name: regStreet
+          in: query
+          required: true
+          type: string
+          description: 'Registration Address - Street'
+      responses:
+        '200':
+          description: Status 200
+          schema:
+            required:
+              - status
+            type: object
+            properties:
+              status:
+                type: string
+                description: >-
+                  For failed result:
+                    denied - access denied
+                  For success result:
+                    success
+                example: success
+              token:
+                type: string
+                description: >-
+                  Api access token (used in request)
+          examples:
+            application/json:
+              status: success
+        '500':
+          description: >-
+            Internal Server Error - problem with processing data on server
+            Please, contact with support team - support@baasisid.com
+      x-code-samples:
+        - lang: Curl
+          source: |
+            curl \
+                -H "Content-Type: application/json" \
+                -X POST -d '{"key": "BAASIS_API_KEY", "userHash": "b84caa8cb9097361b89509c7395be1e7f7743442", "authToken":"aat-d67b6cd3-7255-4203-b351-3bd26233dcc8", "name": "My company name", "dba": "Good Company", "incDate": "2017-10-11", "regNum": "B11111111", "regCountry": "sg", "regCity": "Singapore", "regZip": "045656", "regStreet": "The finest Street, 11"}' \
+                https://api.baasisid.com/auth/company
+        - lang: Java
+          source: |
+
+        - lang: Android
+          source: |
+
+        - lang: Objective-C
+          source: |
+
+        - lang: JavaScript
+          source: |
+
+        - lang: C#
+          source: |
+
+        - lang: PHP
+          source: |
+
+        - lang: Perl
+          source: |
+
+        - lang: Python
+          source: |
+  /auth/company-upload:
+    post:
+      tags:
+        - companies
+      summary: Upload company documents to server
+      description: Upload company documents on the server
+      operationId: company-upload
+      consumes:
+        - multipart/form-data
+      parameters:
+        - name: key
+          in: query
+          required: true
+          type: string
+          description: 'BAASIS ID API KEY (from panel)'
+        - name: userHash
+          in: query
+          required: true
+          type: string
+          description: 'User hash ID, received after registration/authorization or auth/finish (user_hash)'
+        - name: authToken
+          in: query
+          required: true
+          type: string
+          description: 'Token for API access, received after registration/authorization or auth/finish (api_access_token)'
+        - name: num
+          in: query
+          required: false
+          type: number
+          description: >-
+            Document type. "1" by default.
+            "1" - Certificate of Incorporation or Business Registration Certificate or equivalent document issued by Government authority.
+            "2" - Signed organisation chart showing share holding structure and percentage.
+            "3" - Copy ID of UBOs and Directors. Acceptable IDs include: Valid Passport, National ID, or Driver License.
+            "4" - Latest audited financial report.
+            "5" - A copy of recent statement (no older than 3 months) for the bank account from which client indends to fund the prepaid account.
+            "6" - A copy of business license, if applicable.
+        - name: file
+          in: formData
+          required: true
+          type: file
+          format: binary
+          description: Document file (.jpg, .jpeg, .png, .gif, .tiff, .pdf, .doc, .docx, .xls, .xlsx, .txt)
+
+      responses:
+        '200':
+          description: Status 200
+          schema:
+            required:
+              - status
+            type: object
+            properties:
+              status:
+                type: string
+                description: >-
+                  For failed result:
+                    denied - access denied
+                  For success result:
+                    ok
+                example: ok
+              token:
+                type: string
+                description: >-
+                  Api access token (used in request)
+          examples:
+            application/json:
+              status: ok
+        '500':
+          description: >-
+            Internal Server Error - problem with processing data on server.
+            Please, contact with support team - support@baasisid.com
+      x-code-samples:
+        - lang: Curl
+          source: |
+            curl \
+              -F "key=BAASIS_API_KEY" \
+              -F "userHash=b84caa8cb9097361b89509c7395be1e7f7743442" \
+              -F "authToken=aat-d67b6cd3-7255-4203-b351-3bd26233dcc8" \
+              -F "num=1" \
+              -F "file=@/path/to/file.pdf" \
+            https://api.baasisid.com/auth/company-upload
+        - lang: Java
+          source: |
+
+        - lang: Android
+          source: |
+
+        - lang: Objective-C
+          source: |
+
+        - lang: JavaScript
+          source: |
+
+        - lang: C#
+          source: |
+
+        - lang: PHP
+          source: |
+
+        - lang: Perl
+          source: |
+
+        - lang: Python
+          source: |
