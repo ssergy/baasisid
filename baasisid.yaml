@@ -4,55 +4,57 @@ info:
   description: |
     ## BAASIS ID integration API
     BAASIS ID provides 2 available integration approaches:
-    
+
     1) Web Widget enables you to embed verification features in your website or
     application
-    
-    2) Customer integration using our APIs.
 
+    2) Status callback
 
+    3) Customer integration using our APIs.
+
+    <br />
     ### 1. Web Widget integration
-    
+
     Embed the BAASIS ID Login button in your registration/authorisation form (like Facebook, Google+ and other social network buttons);
       You are able to find 3 different colour schemes.
-    
+
     Insert widget code in &lt;head&gt; ... &lt;/head&gt; section on your website:
     ```
     <script type="text/javascript" src="https://api.baasisid.com/assets/js/widget.js"></script>
     ```
-    ---
-    
+    <br />
+
     Add widget location on your website after &lt;body&gt; tag:
-    
+
     ```
     <div id="bas-widget-container" style="min-height: 350px;"> BAASIS ID loading...</div>
     ```
-    
-    ---
-    
+
+    <br />
+
     Add widget code on the bottom of your page before &lt;/body&gt; tag:
-    
+
     ```
     <script type="text/javascript">
        window.BAS.AS.initFrame({
            key: "BAASISID_API_KEY",
             bas_gw: "https://api.baasisid.com/",
             container_id: "bas-widget-container",
-    
+
             ui: {
                 width: "100%",
                 height: "108px",
                 style: "",
             },
-    
+
             options: {
-    
+
             },
             events:{
                 onLoad: function(){
                    console.log("BAS AS loaded");
                 },
-    
+
                 onManualCheck: function(result) {
                    if (result.status === "ok"){
                       // User check success
@@ -61,7 +63,7 @@ info:
                      // User pushed cancel button
                    }
                 },
-    
+
                 onAuthSuccess: function(result) {
                    // User auth success
                    // ... Add Your code here ...
@@ -70,62 +72,62 @@ info:
         });
     </script>
     ```
-    ---
-    
+    <br />
+
     **Widget settings:**
-    
+
     Replace BAASISID_API_KEY with the BAASIS ID API Key.
-    
+
     You can find the Key in your CRM profile;
-    
-    
+
+
     You have to configure the data transfer using 2 Widget methods: **onManualCheck** and **onAuthSuccess**;
-    
-    
+
+
     **onManualCheck** - the method is called by Widget in case of successful  / unsuccessful end of the user registration via Widget.
-    
+
     You will receive object called "result".
-    
-    
+
+
     If user successfully registered, result looks like:
-    
+
      ```
      {status: 'ok', user_hash: 'XXXXXXXXXXX', api_access_token: 'YYYYYYYYYYYYY'}
      ```
-    
+
       In case if registration has been canceled:
-    
-    
+
+
     ```
     {status: 'canceled'}
     ```
-    
+
     The values of "result" object:
      * status - request status;
      * user_hash - unique string user ID;
      * api_access_token - token to work with BAASIS ID server;
-    
+
     Token lifetime: 60 minutes.
-    
-    
+
+
     **onAuthSuccess** - the method is called by Widget in case of successful user authorisation.
       You will receive object called "result". If user successfully registered, result looks similiarly to onManualCheck in case of completion:
     ```
     {status: 'ok', user_hash: 'XXXXXXXXXXX', api_access_token: 'YYYYYYYYYYYYY'}
     ```
-    
+
     If you receive a successful "result" object, you must send a request to your server and execute a server API request from the **server**:
 
-    
-      (see "Users / Receiving user information and status validation" in this API doc)
-    
+
+      (see "Check data / Receiving user information and status validation" in this API doc)
+
     ```
     /users/{user_hash}/{api_access_token}?secret=BAASIS_API_SECRET1
     ```
-    
-    
+
+
     For request to Your server in javascript you can use ajax query jquery library (jquery.com)
-    
+
     ```
     function check_result(result) {
       $.get('https://your-own-server.com/?hash='+result.user_hash+'&token='+result.api_access_token,
@@ -134,57 +136,112 @@ info:
       });
     }
     ```
-    
+
     or redirect to Your server page
-    
+
     ```
     document.location.href='https://your-own-server.com/?hash='+result.user_hash+'&token='+result.api_access_token;
-    
+
     ```
 
+    <br />
+    <br />
+    ### 2. Status callback
 
+    Callback is being sent if a user’s status is changed to ‘approved’ or ‘declined’.
+    In case of post moderation, callback is only being sent when your company performs double check on the client.
 
-    ---
-    
-    ### 2. API integration
+    To enable callback, please install Callback Url in CRM settings.
+
+    An example of callback request:
+    ```
+    {"user_id":2027,
+     "user_hash":"27c5728a-7130-408d-b0a1-d55ed8ae7b2f",
+     "status":11,
+     "signature":"7ca05937a0e5c42147be2aa23ffad87e80bd866e1ff7950ec6841d4d87d844fe",
+     "autocheck_bad_reasons":""}
+    ```
+
+    * user_id - user’s ID
+    * user_hash - user’s unique hash
+    * status - user’s status (10 - user is confirmed; 11 - user is declined)
+    * autocheck_bad_reasons - the reason for the request to be automatically declined
+    * signature - signature of the request
+
+    Your request is signed as BAASIS_API_SECRET2 (can be found in CRM settings)
+    To create a signature you need to get sha256 hash from concatenation of the following line:
+
+    ```
+    BAASIS_API_SECRET2+user_id+user_hash+status+autocheck_bad_reasons
+    ```
+
+    Java signature example:
+    ```
+    String sign256hex = org.apache.commons.codec.digest.DigestUtils.sha256Hex(BAASIS_API_SECRET2 + user_id + user_hash + status + autocheck_bad_reasons);
+    if (sign256hex.equals(signature)) {
+        // Signed ...
+    }
+    ```
+
+    PHP signature example:
+    ```
+    $signature = hash('sha256', BAASIS_API_SECRET2 . $inp['user_id'] . $inp['user_hash'] . $inp['status'] . $inp['autocheck_bad_reasons']);
+    if ($signature == $inp['signature']) {
+
+    }
+    ```
+
+    In response to callback you have to send the status “200OK” with any text, for example, “OK”.
+
+    If a response has not been received or it did not contain “200OK”, the system stops sending requests for 3 minutes.
+    After 3 minutes it retries to send a request.  And so on.
+
+    <br />
+    <br />
+    ### 3. API integration
 
     **The order of terminal operations with API:**
-    
-    
+
+
     1) Call method: /send-form
-    
-    
+
+
     Using the method, you send basic user parameters
-    
-    
+
+
     2) Call for One-Time-Password /send-sms
-    
-    
+
+
     3) SMS code received from the user is sent to /check-sms-code
-    
-    
+
+
     4) Photo of the user document is sent to /send-document
-    
-    
+
+
     (2 requests in the case of a two-sided document - ID card)
-    
-    
+
+
     5) Send user's video (selfy) to /send-video
-    
-    
+
+
     6) Send user's bank statement /send-statement
-    
-    
+
+
     7) Call /finish request to end the user registration
-    
-    
+
+
     8) In order to receive information about the user's data confirmation, it is required frequently make a request to
     /users/{user_hash}/{api_access_token}
 
+
+    Alternatively, get a callback in case of changes in user’s status (please see "Status callback" section)
+
+
   title: BaasisID API
 tags:
-  - name: auth
-  - name: users
+  - name: send data
+  - name: check data
+  - name: send companies data
 consumes:
   - application/json
 produces:
@@ -195,7 +252,7 @@ paths:
   /auth/baasid-login:
     post:
       tags:
-        - auth
+        - send data
       summary: API Authorization
       description: Authorization of BAASIS ID registered user
       operationId: baasid-login
@@ -298,7 +355,7 @@ paths:
                 -H "Content-Type: application/json" \
                 -X POST -d '{"key": "BAASIS_API_KEY", "login": "6581234567", "password":"demo"}' \
                 https://api.baasisid.com/auth/baasid-login
-            
+
         - lang: Java
           source: |
             import io.swagger.client.*;
@@ -386,7 +443,7 @@ paths:
                 {
                     public void main()
                     {
-                        
+
                         var apiInstance = new DefaultApi();
                         var login = login_example;  // String | The phone number of the user in the following format [country code]-[phone number]
                         var password = password_example;  // String | User password
@@ -428,7 +485,7 @@ paths:
             my $login = login_example; # String | The phone number of the user in the following format [country code]-[phone number]
             my $password = password_example; # String | User password
             my $key = key_example; # String | BAASIS ID API KEY (from panel)
-            eval { 
+            eval {
                 my $result = $api_instance->authBaasidLoginPost(login => $login, password => $password, key => $key);
                 print Dumper($result);
             };
@@ -447,7 +504,7 @@ paths:
             login = login_example # String | The phone number of the user in the following format [country code]-[phone number]
             password = password_example # String | User password
             key = key_example # String | BAASIS ID API KEY (from panel)
-            try: 
+            try:
                 # API Authorization
                 api_response = api_instance.auth_baasid_login_post(login, password, key)
                 pprint(api_response)
@@ -456,7 +513,7 @@ paths:
   /auth/send-form:
     post:
       tags:
-        - auth
+        - send data
       summary: Registration start - send basic data
       description: >-
         The first step of registering a new user, sending basic data about user
@@ -617,14 +674,14 @@ paths:
             import io.swagger.client.auth.*;
             import io.swagger.client.model.*;
             import io.swagger.client.api.DefaultApi;
-            
+
             import java.io.File;
             import java.util.*;
-            
+
             public class DefaultApiExample {
-            
+
                 public static void main(String[] args) {
-                    
+
                     DefaultApi apiInstance = new DefaultApi();
                     String key = key_example; // String | BAASIS ID API KEY (from panel)
                     String firstName = firstName_example; // String | User first name
@@ -650,9 +707,9 @@ paths:
         - lang: Android
           source: |
             import io.swagger.client.api.DefaultApi;
-            
+
             public class DefaultApiExample {
-            
+
                 public static void main(String[] args) {
                     DefaultApi apiInstance = new DefaultApi();
                     String key = key_example; // String | BAASIS ID API KEY (from panel)
@@ -690,9 +747,9 @@ paths:
             String *countryNationality = countryNationality_example; // Country of citizenship, iso2 code
             String *middleName = middleName_example; // User middle name (optional)
             String *phone2 = phone2_example; // Additional phone number of the user in the following format [country code]-[phone number] (optional)
-            
+
             DefaultApi *apiInstance = [[DefaultApi alloc] init];
-            
+
             // Registration start - send basic data
             [apiInstance authSendFormPostWith:key
                 firstName:firstName
@@ -717,34 +774,34 @@ paths:
         - lang: JavaScript
           source: |
             var BaasisIdApi = require('baasis_id_api');
-            
+
             var api = new BaasisIdApi.DefaultApi()
-            
+
             var key = key_example; // {String} BAASIS ID API KEY (from panel)
-            
+
             var firstName = firstName_example; // {String} User first name
-            
+
             var lastName = lastName_example; // {String} User last name
-            
+
             var email = email_example; // {String} User e-mail address
-            
+
             var phone = phone_example; // {String} The phone number of the user in the following format [country code]-[phone number]
-            
+
             var gender = 3.4; // {BigDecimal} Gender, 0 - male, 1 - female
-            
+
             var birthdayDay = birthdayDay_example; // {String} User birthday day (valid day number, 1-31)
-            
+
             var birthdayMonth = birthdayMonth_example; // {String} User birthday month number (1 - January .. 12 - December)
-            
+
             var birthdayYear = birthdayYear_example; // {String} User birthday year, valid year number, from 1917 to current year
-            
+
             var countryNationality = countryNationality_example; // {String} Country of citizenship, iso2 code
-            
-            var opts = { 
+
+            var opts = {
               'middleName': middleName_example, // {String} User middle name
               'phone2': phone2_example // {String} Additional phone number of the user in the following format [country code]-[phone number]
             };
-            
+
             var callback = function(error, data, response) {
               if (error) {
                 console.error(error);
@@ -760,14 +817,14 @@ paths:
             using IO.Swagger.Api;
             using IO.Swagger.Client;
             using IO.Swagger.Model;
-            
+
             namespace Example
             {
                 public class authSendFormPostExample
                 {
                     public void main()
                     {
-                        
+
                         var apiInstance = new DefaultApi();
                         var key = key_example;  // String | BAASIS ID API KEY (from panel)
                         var firstName = firstName_example;  // String | User first name
@@ -779,9 +836,9 @@ paths:
                         var birthdayMonth = birthdayMonth_example;  // String | User birthday month number (1 - January .. 12 - December)
                         var birthdayYear = birthdayYear_example;  // String | User birthday year, valid year number, from 1917 to current year
                         var countryNationality = countryNationality_example;  // String | Country of citizenship, iso2 code
-                        var middleName = middleName_example;  // String | User middle name (optional) 
-                        var phone2 = phone2_example;  // String | Additional phone number of the user in the following format [country code]-[phone number] (optional) 
-                        
+                        var middleName = middleName_example;  // String | User middle name (optional)
+                        var phone2 = phone2_example;  // String | Additional phone number of the user in the following format [country code]-[phone number] (optional)
+
                         try
                         {
                             // Registration start - send basic data
@@ -799,7 +856,7 @@ paths:
           source: |
             <?php
             require_once(__DIR__ . '/vendor/autoload.php');
-            
+
             $api_instance = new Swagger\Client\Api\DefaultApi();
             $key = key_example; // String | BAASIS ID API KEY (from panel)
             $firstName = firstName_example; // String | User first name
@@ -813,7 +870,7 @@ paths:
             $countryNationality = countryNationality_example; // String | Country of citizenship, iso2 code
             $middleName = middleName_example; // String | User middle name
             $phone2 = phone2_example; // String | Additional phone number of the user in the following format [country code]-[phone number]
-            
+
             try {
                 $result = $api_instance->authSendFormPost($key, $firstName, $lastName, $email, $phone, $gender, $birthdayDay, $birthdayMonth, $birthdayYear, $countryNationality, $middleName, $phone2);
                 print_r($result);
@@ -826,7 +883,7 @@ paths:
             use Data::Dumper;
             use WWW::SwaggerClient::Configuration;
             use WWW::SwaggerClient::DefaultApi;
-            
+
             my $api_instance = WWW::SwaggerClient::DefaultApi->new();
             my $key = key_example; # String | BAASIS ID API KEY (from panel)
             my $firstName = firstName_example; # String | User first name
@@ -840,8 +897,8 @@ paths:
             my $countryNationality = countryNationality_example; # String | Country of citizenship, iso2 code
             my $middleName = middleName_example; # String | User middle name
             my $phone2 = phone2_example; # String | Additional phone number of the user in the following format [country code]-[phone number]
-            
-            eval { 
+
+            eval {
                 my $result = $api_instance->authSendFormPost(key => $key, firstName => $firstName, lastName => $lastName, email => $email, phone => $phone, gender => $gender, birthdayDay => $birthdayDay, birthdayMonth => $birthdayMonth, birthdayYear => $birthdayYear, countryNationality => $countryNationality, middleName => $middleName, phone2 => $phone2);
                 print Dumper($result);
             };
@@ -855,7 +912,7 @@ paths:
             import swagger_client
             from swagger_client.rest import ApiException
             from pprint import pprint
-            
+
             # create an instance of the API class
             api_instance = swagger_client.DefaultApi()
             key = key_example # String | BAASIS ID API KEY (from panel)
@@ -870,8 +927,8 @@ paths:
             countryNationality = countryNationality_example # String | Country of citizenship, iso2 code
             middleName = middleName_example # String | User middle name (optional)
             phone2 = phone2_example # String | Additional phone number of the user in the following format [country code]-[phone number] (optional)
-            
-            try: 
+
+            try:
                 # Registration start - send basic data
                 api_response = api_instance.auth_send_form_post(key, firstName, lastName, email, phone, gender, birthdayDay, birthdayMonth, birthdayYear, countryNationality, middleName=middleName, phone2=phone2)
                 pprint(api_response)
@@ -880,7 +937,7 @@ paths:
   /auth/send-sms:
     post:
       tags:
-        - auth
+        - send data
       summary: OTP sms request
       description: Sending SMS to the user to confirm a phone number
       operationId: send-sms
@@ -947,14 +1004,14 @@ paths:
             import io.swagger.client.auth.*;
             import io.swagger.client.model.*;
             import io.swagger.client.api.DefaultApi;
-            
+
             import java.io.File;
             import java.util.*;
-            
+
             public class DefaultApiExample {
-            
+
                 public static void main(String[] args) {
-                    
+
                     DefaultApi apiInstance = new DefaultApi();
                     String userHash = userHash_example; // String | User hash (received in the /send-form step)
                     String checkId = checkId_example; // String | Unique registration ID (received in the /send form step)
@@ -970,9 +1027,9 @@ paths:
         - lang: Android
           source: |
             import io.swagger.client.api.DefaultApi;
-            
+
             public class DefaultApiExample {
-            
+
                 public static void main(String[] args) {
                     DefaultApi apiInstance = new DefaultApi();
                     String userHash = userHash_example; // String | User hash (received in the /send-form step)
@@ -990,9 +1047,9 @@ paths:
           source: |
             String *userHash = userHash_example; // User hash (received in the /send-form step)
             String *checkId = checkId_example; // Unique registration ID (received in the /send form step)
-            
+
             DefaultApi *apiInstance = [[DefaultApi alloc] init];
-            
+
             // OTP sms request
             [apiInstance authSendSmsPostWith:userHash
                 checkId:checkId
@@ -1007,13 +1064,13 @@ paths:
         - lang: JavaScript
           source: |
             var BaasisIdApi = require('baasis_id_api');
-            
+
             var api = new BaasisIdApi.DefaultApi()
-            
+
             var userHash = userHash_example; // {String} User hash (received in the /send-form step)
-            
+
             var checkId = checkId_example; // {String} Unique registration ID (received in the /send form step)
-            
+
             var callback = function(error, data, response) {
               if (error) {
                 console.error(error);
@@ -1029,18 +1086,18 @@ paths:
             using IO.Swagger.Api;
             using IO.Swagger.Client;
             using IO.Swagger.Model;
-            
+
             namespace Example
             {
                 public class authSendSmsPostExample
                 {
                     public void main()
                     {
-                        
+
                         var apiInstance = new DefaultApi();
                         var userHash = userHash_example;  // String | User hash (received in the /send-form step)
                         var checkId = checkId_example;  // String | Unique registration ID (received in the /send form step)
-            
+
                         try
                         {
                             // OTP sms request
@@ -1058,11 +1115,11 @@ paths:
           source: |
             <?php
             require_once(__DIR__ . '/vendor/autoload.php');
-            
+
             $api_instance = new Swagger\Client\Api\DefaultApi();
             $userHash = userHash_example; // String | User hash (received in the /send-form step)
             $checkId = checkId_example; // String | Unique registration ID (received in the /send form step)
-            
+
             try {
                 $result = $api_instance->authSendSmsPost($userHash, $checkId);
                 print_r($result);
@@ -1075,12 +1132,12 @@ paths:
             use Data::Dumper;
             use WWW::SwaggerClient::Configuration;
             use WWW::SwaggerClient::DefaultApi;
-            
+
             my $api_instance = WWW::SwaggerClient::DefaultApi->new();
             my $userHash = userHash_example; # String | User hash (received in the /send-form step)
             my $checkId = checkId_example; # String | Unique registration ID (received in the /send form step)
-            
-            eval { 
+
+            eval {
                 my $result = $api_instance->authSendSmsPost(userHash => $userHash, checkId => $checkId);
                 print Dumper($result);
             };
@@ -1094,13 +1151,13 @@ paths:
             import swagger_client
             from swagger_client.rest import ApiException
             from pprint import pprint
-            
+
             # create an instance of the API class
             api_instance = swagger_client.DefaultApi()
             userHash = userHash_example # String | User hash (received in the /send-form step)
             checkId = checkId_example # String | Unique registration ID (received in the /send form step)
-            
-            try: 
+
+            try:
                 # OTP sms request
                 api_response = api_instance.auth_send_sms_post(userHash, checkId)
                 pprint(api_response)
@@ -1109,7 +1166,7 @@ paths:
   /auth/check-sms-code:
     post:
       tags:
-        - auth
+        - send data
       summary: Checking the OTP (SMS) code
       description: OTP (SMS) code checking
       operationId: check-sms-code
@@ -1191,14 +1248,14 @@ paths:
             import io.swagger.client.auth.*;
             import io.swagger.client.model.*;
             import io.swagger.client.api.DefaultApi;
-            
+
             import java.io.File;
             import java.util.*;
-            
+
             public class DefaultApiExample {
-            
+
                 public static void main(String[] args) {
-                    
+
                     DefaultApi apiInstance = new DefaultApi();
                     String userHash = userHash_example; // String | User hash (received in the /send-form step)
                     String checkId = checkId_example; // String | User registration ID (received in the /send-form step)
@@ -1216,9 +1273,9 @@ paths:
         - lang: Android
           source: |
             import io.swagger.client.api.DefaultApi;
-            
+
             public class DefaultApiExample {
-            
+
                 public static void main(String[] args) {
                     DefaultApi apiInstance = new DefaultApi();
                     String userHash = userHash_example; // String | User hash (received in the /send-form step)
@@ -1240,9 +1297,9 @@ paths:
             String *checkId = checkId_example; // User registration ID (received in the /send-form step)
             String *phone = phone_example; // The phone number of the user in the following format [country code]-[phone number]
             String *code = code_example; // Verification code (OTP code) received in SMS
-            
+
             DefaultApi *apiInstance = [[DefaultApi alloc] init];
-            
+
             // Checking the OTP (SMS) code
             [apiInstance authCheckSmsCodePostWith:userHash
                 checkId:checkId
@@ -1259,17 +1316,17 @@ paths:
         - lang: JavaScript
           source: |
             var BaasisIdApi = require('baasis_id_api');
-            
+
             var api = new BaasisIdApi.DefaultApi()
-            
+
             var userHash = userHash_example; // {String} User hash (received in the /send-form step)
-            
+
             var checkId = checkId_example; // {String} User registration ID (received in the /send-form step)
-            
+
             var phone = phone_example; // {String} The phone number of the user in the following format [country code]-[phone number]
-            
+
             var code = code_example; // {String} Verification code (OTP code) received in SMS
-            
+
             var callback = function(error, data, response) {
               if (error) {
                 console.error(error);
@@ -1285,20 +1342,20 @@ paths:
             using IO.Swagger.Api;
             using IO.Swagger.Client;
             using IO.Swagger.Model;
-            
+
             namespace Example
             {
                 public class authCheckSmsCodePostExample
                 {
                     public void main()
                     {
-                        
+
                         var apiInstance = new DefaultApi();
                         var userHash = userHash_example;  // String | User hash (received in the /send-form step)
                         var checkId = checkId_example;  // String | User registration ID (received in the /send-form step)
                         var phone = phone_example;  // String | The phone number of the user in the following format [country code]-[phone number]
                         var code = code_example;  // String | Verification code (OTP code) received in SMS
-            
+
                         try
                         {
                             // Checking the OTP (SMS) code
@@ -1316,13 +1373,13 @@ paths:
           source: |
             <?php
             require_once(__DIR__ . '/vendor/autoload.php');
-            
+
             $api_instance = new Swagger\Client\Api\DefaultApi();
             $userHash = userHash_example; // String | User hash (received in the /send-form step)
             $checkId = checkId_example; // String | User registration ID (received in the /send-form step)
             $phone = phone_example; // String | The phone number of the user in the following format [country code]-[phone number]
             $code = code_example; // String | Verification code (OTP code) received in SMS
-            
+
             try {
                 $result = $api_instance->authCheckSmsCodePost($userHash, $checkId, $phone, $code);
                 print_r($result);
@@ -1335,14 +1392,14 @@ paths:
             use Data::Dumper;
             use WWW::SwaggerClient::Configuration;
             use WWW::SwaggerClient::DefaultApi;
-            
+
             my $api_instance = WWW::SwaggerClient::DefaultApi->new();
             my $userHash = userHash_example; # String | User hash (received in the /send-form step)
             my $checkId = checkId_example; # String | User registration ID (received in the /send-form step)
             my $phone = phone_example; # String | The phone number of the user in the following format [country code]-[phone number]
             my $code = code_example; # String | Verification code (OTP code) received in SMS
-            
-            eval { 
+
+            eval {
                 my $result = $api_instance->authCheckSmsCodePost(userHash => $userHash, checkId => $checkId, phone => $phone, code => $code);
                 print Dumper($result);
             };
@@ -1356,15 +1413,15 @@ paths:
             import swagger_client
             from swagger_client.rest import ApiException
             from pprint import pprint
-            
+
             # create an instance of the API class
             api_instance = swagger_client.DefaultApi()
             userHash = userHash_example # String | User hash (received in the /send-form step)
             checkId = checkId_example # String | User registration ID (received in the /send-form step)
             phone = phone_example # String | The phone number of the user in the following format [country code]-[phone number]
             code = code_example # String | Verification code (OTP code) received in SMS
-            
-            try: 
+
+            try:
                 # Checking the OTP (SMS) code
                 api_response = api_instance.auth_check_sms_code_post(userHash, checkId, phone, code)
                 pprint(api_response)
@@ -1373,7 +1430,7 @@ paths:
   /auth/check-card:
     post:
       tags:
-        - auth
+        - send data
       summary: Debit/Credit card verification
       description: >-
         System withdraw a random amount to $1 and refund immediately. We do not
@@ -1463,14 +1520,14 @@ paths:
             import io.swagger.client.auth.*;
             import io.swagger.client.model.*;
             import io.swagger.client.api.DefaultApi;
-            
+
             import java.io.File;
             import java.util.*;
-            
+
             public class DefaultApiExample {
-            
+
                 public static void main(String[] args) {
-                    
+
                     DefaultApi apiInstance = new DefaultApi();
                     String userHash = userHash_example; // String | Hash пользователя
                     String checkId = checkId_example; // String | User registration ID (received in the /send-form step)
@@ -1491,9 +1548,9 @@ paths:
         - lang: Android
           source: |
             import io.swagger.client.api.DefaultApi;
-            
+
             public class DefaultApiExample {
-            
+
                 public static void main(String[] args) {
                     DefaultApi apiInstance = new DefaultApi();
                     String userHash = userHash_example; // String | Hash пользователя
@@ -1521,9 +1578,9 @@ paths:
             String *month = month_example; // Card expiration month
             String *year = year_example; // Card expiration year
             String *holder = holder_example; // Cardholder name
-            
+
             DefaultApi *apiInstance = [[DefaultApi alloc] init];
-            
+
             // Debit/Credit card verification
             [apiInstance authCheckCardPostWith:userHash
                 checkId:checkId
@@ -1543,23 +1600,23 @@ paths:
         - lang: JavaScript
           source: |
             var BaasisIdApi = require('baasis_id_api');
-            
+
             var api = new BaasisIdApi.DefaultApi()
-            
+
             var userHash = userHash_example; // {String} Hash пользователя
-            
+
             var checkId = checkId_example; // {String} User registration ID (received in the /send-form step)
-            
+
             var number = number_example; // {String} Card number without spaces and delimiters, only digits
-            
+
             var cvc = cvc_example; // {String} cvv code
-            
+
             var month = month_example; // {String} Card expiration month
-            
+
             var year = year_example; // {String} Card expiration year
-            
+
             var holder = holder_example; // {String} Cardholder name
-            
+
             var callback = function(error, data, response) {
               if (error) {
                 console.error(error);
@@ -1575,14 +1632,14 @@ paths:
             using IO.Swagger.Api;
             using IO.Swagger.Client;
             using IO.Swagger.Model;
-            
+
             namespace Example
             {
                 public class authCheckCardPostExample
                 {
                     public void main()
                     {
-                        
+
                         var apiInstance = new DefaultApi();
                         var userHash = userHash_example;  // String | Hash пользователя
                         var checkId = checkId_example;  // String | User registration ID (received in the /send-form step)
@@ -1591,7 +1648,7 @@ paths:
                         var month = month_example;  // String | Card expiration month
                         var year = year_example;  // String | Card expiration year
                         var holder = holder_example;  // String | Cardholder name
-            
+
                         try
                         {
                             // Debit/Credit card verification
@@ -1609,7 +1666,7 @@ paths:
           source: |
             <?php
             require_once(__DIR__ . '/vendor/autoload.php');
-            
+
             $api_instance = new Swagger\Client\Api\DefaultApi();
             $userHash = userHash_example; // String | Hash пользователя
             $checkId = checkId_example; // String | User registration ID (received in the /send-form step)
@@ -1618,7 +1675,7 @@ paths:
             $month = month_example; // String | Card expiration month
             $year = year_example; // String | Card expiration year
             $holder = holder_example; // String | Cardholder name
-            
+
             try {
                 $result = $api_instance->authCheckCardPost($userHash, $checkId, $number, $cvc, $month, $year, $holder);
                 print_r($result);
@@ -1631,7 +1688,7 @@ paths:
             use Data::Dumper;
             use WWW::SwaggerClient::Configuration;
             use WWW::SwaggerClient::DefaultApi;
-            
+
             my $api_instance = WWW::SwaggerClient::DefaultApi->new();
             my $userHash = userHash_example; # String | Hash пользователя
             my $checkId = checkId_example; # String | User registration ID (received in the /send-form step)
@@ -1640,8 +1697,8 @@ paths:
             my $month = month_example; # String | Card expiration month
             my $year = year_example; # String | Card expiration year
             my $holder = holder_example; # String | Cardholder name
-            
-            eval { 
+
+            eval {
                 my $result = $api_instance->authCheckCardPost(userHash => $userHash, checkId => $checkId, number => $number, cvc => $cvc, month => $month, year => $year, holder => $holder);
                 print Dumper($result);
             };
@@ -1655,7 +1712,7 @@ paths:
             import swagger_client
             from swagger_client.rest import ApiException
             from pprint import pprint
-            
+
             # create an instance of the API class
             api_instance = swagger_client.DefaultApi()
             userHash = userHash_example # String | Hash пользователя
@@ -1665,8 +1722,8 @@ paths:
             month = month_example # String | Card expiration month
             year = year_example # String | Card expiration year
             holder = holder_example # String | Cardholder name
-            
-            try: 
+
+            try:
                 # Debit/Credit card verification
                 api_response = api_instance.auth_check_card_post(userHash, checkId, number, cvc, month, year, holder)
                 pprint(api_response)
@@ -1675,7 +1732,7 @@ paths:
   /auth/send-document:
     post:
       tags:
-        - auth
+        - send data
       summary: Upload documents to server
       description: Upload user passport or ID card (2 side photo) on the server
       operationId: send-document
@@ -1743,14 +1800,14 @@ paths:
             import io.swagger.client.auth.*;
             import io.swagger.client.model.*;
             import io.swagger.client.api.DefaultApi;
-            
+
             import java.io.File;
             import java.util.*;
-            
+
             public class DefaultApiExample {
-            
+
                 public static void main(String[] args) {
-                    
+
                     DefaultApi apiInstance = new DefaultApi();
                     String userHash = userHash_example; // String | User hash
                     String checkId = checkId_example; // String | User registration ID (received in the /send-form step)
@@ -1768,9 +1825,9 @@ paths:
         - lang: Android
           source: |
             import io.swagger.client.api.DefaultApi;
-            
+
             public class DefaultApiExample {
-            
+
                 public static void main(String[] args) {
                     DefaultApi apiInstance = new DefaultApi();
                     String userHash = userHash_example; // String | User hash
@@ -1792,9 +1849,9 @@ paths:
             String *checkId = checkId_example; // User registration ID (received in the /send-form step)
             File *file = /path/to/file.txt; // Image file
             BigDecimal *step = 3.4; // Document side numeration. "1" by default. For second side of ID card specify "2". (optional)
-            
+
             DefaultApi *apiInstance = [[DefaultApi alloc] init];
-            
+
             // Upload documents to server
             [apiInstance authSendDocumentPostWith:userHash
                 checkId:checkId
@@ -1811,19 +1868,19 @@ paths:
         - lang: JavaScript
           source: |
             var BaasisIdApi = require('baasis_id_api');
-            
+
             var api = new BaasisIdApi.DefaultApi()
-            
+
             var userHash = userHash_example; // {String} User hash
-            
+
             var checkId = checkId_example; // {String} User registration ID (received in the /send-form step)
-            
+
             var file = /path/to/file.txt; // {File} Image file
-            
-            var opts = { 
+
+            var opts = {
               'step': 3.4 // {BigDecimal} Document side numeration. "1" by default. For second side of ID card specify "2".
             };
-            
+
             var callback = function(error, data, response) {
               if (error) {
                 console.error(error);
@@ -1839,20 +1896,20 @@ paths:
             using IO.Swagger.Api;
             using IO.Swagger.Client;
             using IO.Swagger.Model;
-            
+
             namespace Example
             {
                 public class authSendDocumentPostExample
                 {
                     public void main()
                     {
-                        
+
                         var apiInstance = new DefaultApi();
                         var userHash = userHash_example;  // String | User hash
                         var checkId = checkId_example;  // String | User registration ID (received in the /send-form step)
                         var file = new File(); // File | Image file
-                        var step = 3.4;  // BigDecimal | Document side numeration. "1" by default. For second side of ID card specify "2". (optional) 
-            
+                        var step = 3.4;  // BigDecimal | Document side numeration. "1" by default. For second side of ID card specify "2". (optional)
+
                         try
                         {
                             // Upload documents to server
@@ -1870,13 +1927,13 @@ paths:
           source: |
             <?php
             require_once(__DIR__ . '/vendor/autoload.php');
-            
+
             $api_instance = new Swagger\Client\Api\DefaultApi();
             $userHash = userHash_example; // String | User hash
             $checkId = checkId_example; // String | User registration ID (received in the /send-form step)
             $file = /path/to/file.txt; // File | Image file
             $step = 3.4; // BigDecimal | Document side numeration. "1" by default. For second side of ID card specify "2".
-            
+
             try {
                 $result = $api_instance->authSendDocumentPost($userHash, $checkId, $file, $step);
                 print_r($result);
@@ -1889,14 +1946,14 @@ paths:
             use Data::Dumper;
             use WWW::SwaggerClient::Configuration;
             use WWW::SwaggerClient::DefaultApi;
-            
+
             my $api_instance = WWW::SwaggerClient::DefaultApi->new();
             my $userHash = userHash_example; # String | User hash
             my $checkId = checkId_example; # String | User registration ID (received in the /send-form step)
             my $file = /path/to/file.txt; # File | Image file
             my $step = 3.4; # BigDecimal | Document side numeration. "1" by default. For second side of ID card specify "2".
-            
-            eval { 
+
+            eval {
                 my $result = $api_instance->authSendDocumentPost(userHash => $userHash, checkId => $checkId, file => $file, step => $step);
                 print Dumper($result);
             };
@@ -1910,15 +1967,15 @@ paths:
             import swagger_client
             from swagger_client.rest import ApiException
             from pprint import pprint
-            
+
             # create an instance of the API class
             api_instance = swagger_client.DefaultApi()
             userHash = userHash_example # String | User hash
             checkId = checkId_example # String | User registration ID (received in the /send-form step)
             file = /path/to/file.txt # File | Image file
             step = 3.4 # BigDecimal | Document side numeration. "1" by default. For second side of ID card specify "2". (optional)
-            
-            try: 
+
+            try:
                 # Upload documents to server
                 api_response = api_instance.auth_send_document_post(userHash, checkId, file, step=step)
                 pprint(api_response)
@@ -1927,7 +1984,7 @@ paths:
   /auth/send-statement:
     post:
       tags:
-        - auth
+        - send data
       summary: Upload bank statement to server
       description: Upload bank statement on the server
       operationId: send-statement
@@ -1987,14 +2044,14 @@ paths:
             import io.swagger.client.auth.*;
             import io.swagger.client.model.*;
             import io.swagger.client.api.DefaultApi;
-            
+
             import java.io.File;
             import java.util.*;
-            
+
             public class DefaultApiExample {
-            
+
                 public static void main(String[] args) {
-                    
+
                     DefaultApi apiInstance = new DefaultApi();
                     String userHash = userHash_example; // String | User hash
                     String checkId = checkId_example; // String | User registration ID (received in the /send-form step)
@@ -2011,9 +2068,9 @@ paths:
         - lang: Android
           source: |
             import io.swagger.client.api.DefaultApi;
-            
+
             public class DefaultApiExample {
-            
+
                 public static void main(String[] args) {
                     DefaultApi apiInstance = new DefaultApi();
                     String userHash = userHash_example; // String | User hash
@@ -2033,9 +2090,9 @@ paths:
             String *userHash = userHash_example; // User hash
             String *checkId = checkId_example; // User registration ID (received in the /send-form step)
             File *file = /path/to/file.txt; // Image file
-            
+
             DefaultApi *apiInstance = [[DefaultApi alloc] init];
-            
+
             // Upload bank statement to server
             [apiInstance authSendStatementPostWith:userHash
                 checkId:checkId
@@ -2051,15 +2108,15 @@ paths:
         - lang: JavaScript
           source: |
             var BaasisIdApi = require('baasis_id_api');
-            
+
             var api = new BaasisIdApi.DefaultApi()
-            
+
             var userHash = userHash_example; // {String} User hash
-            
+
             var checkId = checkId_example; // {String} User registration ID (received in the /send-form step)
-            
+
             var file = /path/to/file.txt; // {File} Image file
-            
+
             var callback = function(error, data, response) {
               if (error) {
                 console.error(error);
@@ -2075,19 +2132,19 @@ paths:
             using IO.Swagger.Api;
             using IO.Swagger.Client;
             using IO.Swagger.Model;
-            
+
             namespace Example
             {
                 public class authSendStatementPostExample
                 {
                     public void main()
                     {
-                        
+
                         var apiInstance = new DefaultApi();
                         var userHash = userHash_example;  // String | User hash
                         var checkId = checkId_example;  // String | User registration ID (received in the /send-form step)
                         var file = new File(); // File | Image file
-            
+
                         try
                         {
                             // Upload bank statement to server
@@ -2105,12 +2162,12 @@ paths:
           source: |
             <?php
             require_once(__DIR__ . '/vendor/autoload.php');
-            
+
             $api_instance = new Swagger\Client\Api\DefaultApi();
             $userHash = userHash_example; // String | User hash
             $checkId = checkId_example; // String | User registration ID (received in the /send-form step)
             $file = /path/to/file.txt; // File | Image file
-            
+
             try {
                 $result = $api_instance->authSendStatementPost($userHash, $checkId, $file);
                 print_r($result);
@@ -2123,13 +2180,13 @@ paths:
             use Data::Dumper;
             use WWW::SwaggerClient::Configuration;
             use WWW::SwaggerClient::DefaultApi;
-            
+
             my $api_instance = WWW::SwaggerClient::DefaultApi->new();
             my $userHash = userHash_example; # String | User hash
             my $checkId = checkId_example; # String | User registration ID (received in the /send-form step)
             my $file = /path/to/file.txt; # File | Image file
-            
-            eval { 
+
+            eval {
                 my $result = $api_instance->authSendStatementPost(userHash => $userHash, checkId => $checkId, file => $file);
                 print Dumper($result);
             };
@@ -2143,14 +2200,14 @@ paths:
             import swagger_client
             from swagger_client.rest import ApiException
             from pprint import pprint
-            
+
             # create an instance of the API class
             api_instance = swagger_client.DefaultApi()
             userHash = userHash_example # String | User hash
             checkId = checkId_example # String | User registration ID (received in the /send-form step)
             file = /path/to/file.txt # File | Image file
-            
-            try: 
+
+            try:
                 # Upload bank statement to server
                 api_response = api_instance.auth_send_statement_post(userHash, checkId, file)
                 pprint(api_response)
@@ -2159,7 +2216,7 @@ paths:
   /auth/send-video:
     post:
       tags:
-        - auth
+        - send data
       summary: Upload video to server
       description: Upload user video to server
       operationId: send-video
@@ -2219,14 +2276,14 @@ paths:
             import io.swagger.client.auth.*;
             import io.swagger.client.model.*;
             import io.swagger.client.api.DefaultApi;
-            
+
             import java.io.File;
             import java.util.*;
-            
+
             public class DefaultApiExample {
-            
+
                 public static void main(String[] args) {
-                    
+
                     DefaultApi apiInstance = new DefaultApi();
                     String userHash = userHash_example; // String | User hash
                     String checkId = checkId_example; // String | User registration ID (received in the /send-form step)
@@ -2243,9 +2300,9 @@ paths:
         - lang: Android
           source: |
             import io.swagger.client.api.DefaultApi;
-            
+
             public class DefaultApiExample {
-            
+
                 public static void main(String[] args) {
                     DefaultApi apiInstance = new DefaultApi();
                     String userHash = userHash_example; // String | User hash
@@ -2265,9 +2322,9 @@ paths:
             String *userHash = userHash_example; // User hash
             String *checkId = checkId_example; // User registration ID (received in the /send-form step)
             File *file = /path/to/file.txt; // Video recording file
-            
+
             DefaultApi *apiInstance = [[DefaultApi alloc] init];
-            
+
             // Upload video to server
             [apiInstance authSendVideoPostWith:userHash
                 checkId:checkId
@@ -2283,15 +2340,15 @@ paths:
         - lang: JavaScript
           source: |
             var BaasisIdApi = require('baasis_id_api');
-            
+
             var api = new BaasisIdApi.DefaultApi()
-            
+
             var userHash = userHash_example; // {String} User hash
-            
+
             var checkId = checkId_example; // {String} User registration ID (received in the /send-form step)
-            
+
             var file = /path/to/file.txt; // {File} Video recording file
-            
+
             var callback = function(error, data, response) {
               if (error) {
                 console.error(error);
@@ -2307,19 +2364,19 @@ paths:
             using IO.Swagger.Api;
             using IO.Swagger.Client;
             using IO.Swagger.Model;
-            
+
             namespace Example
             {
                 public class authSendVideoPostExample
                 {
                     public void main()
                     {
-                        
+
                         var apiInstance = new DefaultApi();
                         var userHash = userHash_example;  // String | User hash
                         var checkId = checkId_example;  // String | User registration ID (received in the /send-form step)
                         var file = new File(); // File | Video recording file
-            
+
                         try
                         {
                             // Upload video to server
@@ -2337,12 +2394,12 @@ paths:
           source: |
             <?php
             require_once(__DIR__ . '/vendor/autoload.php');
-            
+
             $api_instance = new Swagger\Client\Api\DefaultApi();
             $userHash = userHash_example; // String | User hash
             $checkId = checkId_example; // String | User registration ID (received in the /send-form step)
             $file = /path/to/file.txt; // File | Video recording file
-            
+
             try {
                 $result = $api_instance->authSendVideoPost($userHash, $checkId, $file);
                 print_r($result);
@@ -2355,13 +2412,13 @@ paths:
             use Data::Dumper;
             use WWW::SwaggerClient::Configuration;
             use WWW::SwaggerClient::DefaultApi;
-            
+
             my $api_instance = WWW::SwaggerClient::DefaultApi->new();
             my $userHash = userHash_example; # String | User hash
             my $checkId = checkId_example; # String | User registration ID (received in the /send-form step)
             my $file = /path/to/file.txt; # File | Video recording file
-            
-            eval { 
+
+            eval {
                 my $result = $api_instance->authSendVideoPost(userHash => $userHash, checkId => $checkId, file => $file);
                 print Dumper($result);
             };
@@ -2375,14 +2432,14 @@ paths:
             import swagger_client
             from swagger_client.rest import ApiException
             from pprint import pprint
-            
+
             # create an instance of the API class
             api_instance = swagger_client.DefaultApi()
             userHash = userHash_example # String | User hash
             checkId = checkId_example # String | User registration ID (received in the /send-form step)
             file = /path/to/file.txt # File | Video recording file
-            
-            try: 
+
+            try:
                 # Upload video to server
                 api_response = api_instance.auth_send_video_post(userHash, checkId, file)
                 pprint(api_response)
@@ -2391,7 +2448,7 @@ paths:
   /auth/finish:
     post:
       tags:
-        - auth
+        - send data
       summary: Completion of registration
       description: >-
         Completion of registration. Method to receive the user authorization
@@ -2586,14 +2643,14 @@ paths:
             import io.swagger.client.auth.*;
             import io.swagger.client.model.*;
             import io.swagger.client.api.DefaultApi;
-            
+
             import java.io.File;
             import java.util.*;
-            
+
             public class DefaultApiExample {
-            
+
                 public static void main(String[] args) {
-                    
+
                     DefaultApi apiInstance = new DefaultApi();
                     String countryResidence = countryResidence_example; // String | Country of residence, iso2 code
                     String city = city_example; // String | City
@@ -2628,9 +2685,9 @@ paths:
         - lang: Android
           source: |
             import io.swagger.client.api.DefaultApi;
-            
+
             public class DefaultApiExample {
-            
+
                 public static void main(String[] args) {
                     DefaultApi apiInstance = new DefaultApi();
                     String countryResidence = countryResidence_example; // String | Country of residence, iso2 code
@@ -2686,9 +2743,9 @@ paths:
             String *linkedinFname = linkedinFname_example; // User name in LinkedIn (optional)
             String *linkedinLname = linkedinLname_example; // User surname in LinkedIn (optional)
             String *linkedinEmail = linkedinEmail_example; // User e-mail in LinkedIn (optional)
-            
+
             DefaultApi *apiInstance = [[DefaultApi alloc] init];
-            
+
             // Completion of registration
             [apiInstance authFinishPostWith:countryResidence
                 city:city
@@ -2722,10 +2779,10 @@ paths:
         - lang: JavaScript
           source: |
             var BaasisIdApi = require('baasis_id_api');
-            
+
             var api = new BaasisIdApi.DefaultApi()
-            
-            var opts = { 
+
+            var opts = {
               'countryResidence': countryResidence_example, // {String} Country of residence, iso2 code
               'city': city_example, // {String} City
               'address': address_example, // {String} Address
@@ -2748,7 +2805,7 @@ paths:
               'linkedinLname': linkedinLname_example, // {String} User surname in LinkedIn
               'linkedinEmail': linkedinEmail_example // {String} User e-mail in LinkedIn
             };
-            
+
             var callback = function(error, data, response) {
               if (error) {
                 console.error(error);
@@ -2764,37 +2821,37 @@ paths:
             using IO.Swagger.Api;
             using IO.Swagger.Client;
             using IO.Swagger.Model;
-            
+
             namespace Example
             {
                 public class authFinishPostExample
                 {
                     public void main()
                     {
-                        
+
                         var apiInstance = new DefaultApi();
-                        var countryResidence = countryResidence_example;  // String | Country of residence, iso2 code (optional) 
-                        var city = city_example;  // String | City (optional) 
-                        var address = address_example;  // String | Address (optional) 
-                        var address2 = address2_example;  // String | Aditional address (optional) 
-                        var zip = zip_example;  // String | Index (optional) 
-                        var fbId = fbId_example;  // String | User ID in Facebook (optional) 
-                        var fbFname = fbFname_example;  // String | User name in Facebook (optional) 
-                        var fbLname = fbLname_example;  // String | User surname in Facebook (optional) 
-                        var fbEmail = fbEmail_example;  // String | User e-mail in Facebook (optional) 
-                        var googleId = googleId_example;  // String | User ID in Google (optional) 
-                        var googleFname = googleFname_example;  // String | User name in Google (optional) 
-                        var googleLname = googleLname_example;  // String | User surname in Google (optional) 
-                        var googleEmail = googleEmail_example;  // String | User e-mail in Google (optional) 
-                        var twitterId = twitterId_example;  // String | User ID in Twitter (optional) 
-                        var twitterFname = twitterFname_example;  // String | User name in Twitter (optional) 
-                        var twitterLname = twitterLname_example;  // String | User surname in Twitter (optional) 
-                        var twitterNickname = twitterNickname_example;  // String | User nickname in Twitter (optional) 
-                        var linkedinId = linkedinId_example;  // String | User ID in LinkedIn (optional) 
-                        var linkedinFname = linkedinFname_example;  // String | User name in LinkedIn (optional) 
-                        var linkedinLname = linkedinLname_example;  // String | User surname in LinkedIn (optional) 
-                        var linkedinEmail = linkedinEmail_example;  // String | User e-mail in LinkedIn (optional) 
-            
+                        var countryResidence = countryResidence_example;  // String | Country of residence, iso2 code (optional)
+                        var city = city_example;  // String | City (optional)
+                        var address = address_example;  // String | Address (optional)
+                        var address2 = address2_example;  // String | Aditional address (optional)
+                        var zip = zip_example;  // String | Index (optional)
+                        var fbId = fbId_example;  // String | User ID in Facebook (optional)
+                        var fbFname = fbFname_example;  // String | User name in Facebook (optional)
+                        var fbLname = fbLname_example;  // String | User surname in Facebook (optional)
+                        var fbEmail = fbEmail_example;  // String | User e-mail in Facebook (optional)
+                        var googleId = googleId_example;  // String | User ID in Google (optional)
+                        var googleFname = googleFname_example;  // String | User name in Google (optional)
+                        var googleLname = googleLname_example;  // String | User surname in Google (optional)
+                        var googleEmail = googleEmail_example;  // String | User e-mail in Google (optional)
+                        var twitterId = twitterId_example;  // String | User ID in Twitter (optional)
+                        var twitterFname = twitterFname_example;  // String | User name in Twitter (optional)
+                        var twitterLname = twitterLname_example;  // String | User surname in Twitter (optional)
+                        var twitterNickname = twitterNickname_example;  // String | User nickname in Twitter (optional)
+                        var linkedinId = linkedinId_example;  // String | User ID in LinkedIn (optional)
+                        var linkedinFname = linkedinFname_example;  // String | User name in LinkedIn (optional)
+                        var linkedinLname = linkedinLname_example;  // String | User surname in LinkedIn (optional)
+                        var linkedinEmail = linkedinEmail_example;  // String | User e-mail in LinkedIn (optional)
+
                         try
                         {
                             // Completion of registration
@@ -2812,7 +2869,7 @@ paths:
           source: |
             <?php
             require_once(__DIR__ . '/vendor/autoload.php');
-            
+
             $api_instance = new Swagger\Client\Api\DefaultApi();
             $countryResidence = countryResidence_example; // String | Country of residence, iso2 code
             $city = city_example; // String | City
@@ -2835,7 +2892,7 @@ paths:
             $linkedinFname = linkedinFname_example; // String | User name in LinkedIn
             $linkedinLname = linkedinLname_example; // String | User surname in LinkedIn
             $linkedinEmail = linkedinEmail_example; // String | User e-mail in LinkedIn
-            
+
             try {
                 $result = $api_instance->authFinishPost($countryResidence, $city, $address, $address2, $zip, $fbId, $fbFname, $fbLname, $fbEmail, $googleId, $googleFname, $googleLname, $googleEmail, $twitterId, $twitterFname, $twitterLname, $twitterNickname, $linkedinId, $linkedinFname, $linkedinLname, $linkedinEmail);
                 print_r($result);
@@ -2848,7 +2905,7 @@ paths:
             use Data::Dumper;
             use WWW::SwaggerClient::Configuration;
             use WWW::SwaggerClient::DefaultApi;
-            
+
             my $api_instance = WWW::SwaggerClient::DefaultApi->new();
             my $countryResidence = countryResidence_example; # String | Country of residence, iso2 code
             my $city = city_example; # String | City
@@ -2871,8 +2928,8 @@ paths:
             my $linkedinFname = linkedinFname_example; # String | User name in LinkedIn
             my $linkedinLname = linkedinLname_example; # String | User surname in LinkedIn
             my $linkedinEmail = linkedinEmail_example; # String | User e-mail in LinkedIn
-            
-            eval { 
+
+            eval {
                 my $result = $api_instance->authFinishPost(countryResidence => $countryResidence, city => $city, address => $address, address2 => $address2, zip => $zip, fbId => $fbId, fbFname => $fbFname, fbLname => $fbLname, fbEmail => $fbEmail, googleId => $googleId, googleFname => $googleFname, googleLname => $googleLname, googleEmail => $googleEmail, twitterId => $twitterId, twitterFname => $twitterFname, twitterLname => $twitterLname, twitterNickname => $twitterNickname, linkedinId => $linkedinId, linkedinFname => $linkedinFname, linkedinLname => $linkedinLname, linkedinEmail => $linkedinEmail);
                 print Dumper($result);
             };
@@ -2886,7 +2943,7 @@ paths:
             import swagger_client
             from swagger_client.rest import ApiException
             from pprint import pprint
-            
+
             # create an instance of the API class
             api_instance = swagger_client.DefaultApi()
             countryResidence = countryResidence_example # String | Country of residence, iso2 code (optional)
@@ -2910,8 +2967,8 @@ paths:
             linkedinFname = linkedinFname_example # String | User name in LinkedIn (optional)
             linkedinLname = linkedinLname_example # String | User surname in LinkedIn (optional)
             linkedinEmail = linkedinEmail_example # String | User e-mail in LinkedIn (optional)
-            
-            try: 
+
+            try:
                 # Completion of registration
                 api_response = api_instance.auth_finish_post(countryResidence=countryResidence, city=city, address=address, address2=address2, zip=zip, fbId=fbId, fbFname=fbFname, fbLname=fbLname, fbEmail=fbEmail, googleId=googleId, googleFname=googleFname, googleLname=googleLname, googleEmail=googleEmail, twitterId=twitterId, twitterFname=twitterFname, twitterLname=twitterLname, twitterNickname=twitterNickname, linkedinId=linkedinId, linkedinFname=linkedinFname, linkedinLname=linkedinLname, linkedinEmail=linkedinEmail)
                 pprint(api_response)
@@ -2920,25 +2977,25 @@ paths:
   '/users/{user_hash}/{api_access_token}':
     post:
       tags:
-        - users
+        - check data
       summary: Receiving user information and status validation
       description: |
         Receiving user information and status validation after registration /
         authorization.
-        
+
         The list of fields depends on the settings in the CRM
         dashboard.
-        
+
         The method is applicable ONLY to server-side.
         DO NOT SHARE the data with anyone and DO NOT GIVE AWAY in open format.
-        
+
         The result of request depends on the level of access requested by end-user. The access
         level is determined in the CRM settings. There are 3 methods of access:
-        
+
           1) Basic data: Name, surname, gender, country of citizenship, e-mail address.
-        
+
           2) Additional data: Name, surname, gender, country of citizenship, e-mail address, phone number, age, address details.
-        
+
           3) All data: Name, surname, gender, country of citizenship, e-mail address, phone number, age, address details, passport/id card data, credit card
             information (bank name, country of the issue), social networks data.
       operationId: users
@@ -3100,14 +3157,14 @@ paths:
             import io.swagger.client.auth.*;
             import io.swagger.client.model.*;
             import io.swagger.client.api.DefaultApi;
-            
+
             import java.io.File;
             import java.util.*;
-            
+
             public class DefaultApiExample {
-            
+
                 public static void main(String[] args) {
-                    
+
                     DefaultApi apiInstance = new DefaultApi();
                     String userHash = userHash_example; // String | User hash ID, received after registration/authorization
                     String apiAccessToken = apiAccessToken_example; // String | Token for API access, received after registration/authorization
@@ -3124,9 +3181,9 @@ paths:
         - lang: Android
           source: |
             import io.swagger.client.api.DefaultApi;
-            
+
             public class DefaultApiExample {
-            
+
                 public static void main(String[] args) {
                     DefaultApi apiInstance = new DefaultApi();
                     String userHash = userHash_example; // String | User hash ID, received after registration/authorization
@@ -3146,9 +3203,9 @@ paths:
             String *userHash = userHash_example; // User hash ID, received after registration/authorization
             String *apiAccessToken = apiAccessToken_example; // Token for API access, received after registration/authorization
             String *secret = secret_example; // BAASIS ID SECRET1 - secret key, accessible in BAASIS ID CRM dashboard.
-            
+
             DefaultApi *apiInstance = [[DefaultApi alloc] init];
-            
+
             // Receiving user information and status validation
             [apiInstance usersUserHashApiAccessTokenPostWith:userHash
                 apiAccessToken:apiAccessToken
@@ -3164,15 +3221,15 @@ paths:
         - lang: JavaScript
           source: |
             var BaasisIdApi = require('baasis_id_api');
-            
+
             var api = new BaasisIdApi.DefaultApi()
-            
+
             var userHash = userHash_example; // {String} User hash ID, received after registration/authorization
-            
+
             var apiAccessToken = apiAccessToken_example; // {String} Token for API access, received after registration/authorization
-            
+
             var secret = secret_example; // {String} BAASIS ID SECRET1 - secret key, accessible in BAASIS ID CRM dashboard.
-            
+
             var callback = function(error, data, response) {
               if (error) {
                 console.error(error);
@@ -3188,19 +3245,19 @@ paths:
             using IO.Swagger.Api;
             using IO.Swagger.Client;
             using IO.Swagger.Model;
-            
+
             namespace Example
             {
                 public class usersUserHashApiAccessTokenPostExample
                 {
                     public void main()
                     {
-                        
+
                         var apiInstance = new DefaultApi();
                         var userHash = userHash_example;  // String | User hash ID, received after registration/authorization
                         var apiAccessToken = apiAccessToken_example;  // String | Token for API access, received after registration/authorization
                         var secret = secret_example;  // String | BAASIS ID SECRET1 - secret key, accessible in BAASIS ID CRM dashboard.
-            
+
                         try
                         {
                             // Receiving user information and status validation
@@ -3218,12 +3275,12 @@ paths:
           source: |
             <?php
             require_once(__DIR__ . '/vendor/autoload.php');
-            
+
             $api_instance = new Swagger\Client\Api\DefaultApi();
             $userHash = userHash_example; // String | User hash ID, received after registration/authorization
             $apiAccessToken = apiAccessToken_example; // String | Token for API access, received after registration/authorization
             $secret = secret_example; // String | BAASIS ID SECRET1 - secret key, accessible in BAASIS ID CRM dashboard.
-            
+
             try {
                 $result = $api_instance->usersUserHashApiAccessTokenPost($userHash, $apiAccessToken, $secret);
                 print_r($result);
@@ -3236,13 +3293,13 @@ paths:
             use Data::Dumper;
             use WWW::SwaggerClient::Configuration;
             use WWW::SwaggerClient::DefaultApi;
-            
+
             my $api_instance = WWW::SwaggerClient::DefaultApi->new();
             my $userHash = userHash_example; # String | User hash ID, received after registration/authorization
             my $apiAccessToken = apiAccessToken_example; # String | Token for API access, received after registration/authorization
             my $secret = secret_example; # String | BAASIS ID SECRET1 - secret key, accessible in BAASIS ID CRM dashboard.
-            
-            eval { 
+
+            eval {
                 my $result = $api_instance->usersUserHashApiAccessTokenPost(userHash => $userHash, apiAccessToken => $apiAccessToken, secret => $secret);
                 print Dumper($result);
             };
@@ -3256,14 +3313,14 @@ paths:
             import swagger_client
             from swagger_client.rest import ApiException
             from pprint import pprint
-            
+
             # create an instance of the API class
             api_instance = swagger_client.DefaultApi()
             userHash = userHash_example # String | User hash ID, received after registration/authorization
             apiAccessToken = apiAccessToken_example # String | Token for API access, received after registration/authorization
             secret = secret_example # String | BAASIS ID SECRET1 - secret key, accessible in BAASIS ID CRM dashboard.
-            
-            try: 
+
+            try:
                 # Receiving user information and status validation
                 api_response = api_instance.users_user_hash_api_access_token_post(userHash, apiAccessToken, secret)
                 pprint(api_response)
@@ -3272,7 +3329,7 @@ paths:
   '/users/refresh-access-token/{api_refresh_token}':
     post:
       tags:
-        - users
+        - check data
       summary: Refresh user token
       description: |
         Refresh user token after expiration
@@ -3330,12 +3387,11 @@ paths:
           source: |
             curl \
                 -H "Content-Type: application/json" \
-                -X GET https://apiproxy_srv.datadepot.io/users/refresh-access-token/art-AIzyhpLMnDpstCnAxjYaAYPKMWFIoRRYBZAxlmtY
-
-  /auth/company:
+                -X GET https://api.baasisid.com/users/refresh-access-token/art-AIzyhpLMnDpstCnAxjYaAYPKMWFIoRRYBZAxlmtY
+  '/auth/company':
     post:
       tags:
-        - companies
+        - send companies data
       summary: Saving company information
       description: |
 
@@ -3456,7 +3512,7 @@ paths:
   /auth/company-upload:
     post:
       tags:
-        - companies
+        - send companies data
       summary: Upload company documents to server
       description: Upload company documents on the server
       operationId: company-upload
