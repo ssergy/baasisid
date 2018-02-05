@@ -247,6 +247,7 @@ consumes:
 produces:
   - application/json
 host: api.baasisid.com
+schemes: https
 basePath: /
 paths:
   /auth/baasid-login:
@@ -2975,7 +2976,7 @@ paths:
             except ApiException as e:
                 print("Exception when calling DefaultApi->authFinishPost: %s\n" % e)
   '/users/{user_hash}/{api_access_token}':
-    post:
+    get:
       tags:
         - check data
       summary: Receiving user information and status validation
@@ -3327,7 +3328,7 @@ paths:
             except ApiException as e:
                 print("Exception when calling DefaultApi->usersUserHashApiAccessTokenPost: %s\n" % e)
   '/users/refresh-access-token/{api_refresh_token}':
-    post:
+    get:
       tags:
         - check data
       summary: Refresh user token
