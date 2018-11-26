@@ -1,0 +1,1546 @@
+swagger: '2.0'
+info:
+  version: 1.0.0
+  description: |
+    ## BASIS ID integration API
+    BASIS ID provides 2 available integration approaches:
+
+    1) Web Widget enables you to embed verification features in your website or
+    application
+
+    2) Status callback
+
+    3) Customer integration using our APIs.
+
+    <br />
+    ### 1. Web Widget integration
+
+    Embed the BASIS ID Login button in your registration/authorisation form (like Facebook, Google+ and other social network buttons);
+      You are able to find 3 different colour schemes.
+
+    Insert widget code in &lt;head&gt; ... &lt;/head&gt; section on your website:
+    ```
+    <script type="text/javascript" src="https://api.basisid.com/assets/js/widget.js"></script>
+    ```
+    <br />
+
+    Add widget location on your website after &lt;body&gt; tag:
+
+    ```
+    <div id="bas-widget-container" style="min-height: 350px;"> BASIS ID loading...</div>
+    ```
+
+    <br />
+
+    Add widget code on the bottom of your page before &lt;/body&gt; tag:
+
+    ```
+    <script type="text/javascript">
+       window.BAS.AS.initFrame({
+           key: "BASISID_API_KEY",
+            bas_gw: "https://api.basisid.com/",
+            container_id: "bas-widget-container",
+
+            ui: {
+                width: "100%",
+                height: "108px",
+                style: "",
+            },
+
+            options: {
+
+            },
+            events:{
+                onLoad: function(){
+                   console.log("BAS AS loaded");
+                },
+
+                onManualCheck: function(result) {
+                   if (result.status === "ok"){
+                      // User check success
+                      // ... Add Your code here ...
+                   } else if (result.status === "canceled") {
+                     // User pushed cancel button
+                   }
+                },
+
+                onAuthSuccess: function(result) {
+                   // User auth success
+                   // ... Add Your code here ...
+                },
+            }
+        });
+    </script>
+    ```
+    <br />
+
+    **Widget settings:**
+
+    Replace BASISID_API_KEY with the BASIS ID API Key.
+
+    You can find the Key in your CRM profile;
+
+
+    You have to configure the data transfer using 2 Widget methods: **onManualCheck** and **onAuthSuccess**;
+
+
+    **onManualCheck** - the method is called by Widget in case of successful  / unsuccessful end of the user registration via Widget.
+
+    You will receive object called "result".
+
+
+    If user successfully registered, result looks like:
+
+     ```
+     {status: 'ok', user_hash: 'XXXXXXXXXXX', api_access_token: 'YYYYYYYYYYYYY'}
+     ```
+
+      In case if registration has been canceled:
+
+
+    ```
+    {status: 'canceled'}
+    ```
+
+    The values of "result" object:
+     * status - request status;
+     * user_hash - unique string user ID;
+     * api_access_token - token to work with BASIS ID server;
+
+    Token lifetime: 60 minutes.
+
+
+    **onAuthSuccess** - the method is called by Widget in case of successful user authorisation.
+      You will receive object called "result". If user successfully registered, result looks similiarly to onManualCheck in case of completion:
+    ```
+    {status: 'ok', user_hash: 'XXXXXXXXXXX', api_access_token: 'YYYYYYYYYYYYY'}
+    ```
+
+    If you receive a successful "result" object, you must send a request to your server and execute a server API request from the **server**:
+
+
+      (see "Check data / Receiving user information and status validation" in this API doc)
+
+    ```
+    /users/{user_hash}/{api_access_token}?secret=BASIS_API_SECRET1
+    ```
+
+
+    For request to Your server in javascript you can use ajax query jquery library (jquery.com)
+
+    ```
+    function check_result(result) {
+      $.get('https://your-own-server.com/?hash='+result.user_hash+'&token='+result.api_access_token,
+      function(data) {
+      ...
+      });
+    }
+    ```
+
+    or redirect to Your server page
+
+    ```
+    document.location.href='https://your-own-server.com/?hash='+result.user_hash+'&token='+result.api_access_token;
+
+    ```
+
+    <br />
+    <br />
+    ### 2. Status callback
+
+    Callback is being sent if a user’s status is changed to ‘approved’ or ‘declined’.
+    In case of post moderation, callback is only being sent when your company performs double check on the client.
+
+    To enable callback, please install Callback Url in CRM settings.
+
+    An example of callback request:
+    ```
+    {"user_id":2027,
+     "user_hash":"27c5728a-7130-408d-b0a1-d55ed8ae7b2f",
+     "status":11,
+     "signature":"7ca05937a0e5c42147be2aa23ffad87e80bd866e1ff7950ec6841d4d87d844fe",
+     "autocheck_bad_reasons":""}
+    ```
+
+    * user_id - user’s ID
+    * user_hash - user’s unique hash
+    * status - user’s status (10 - user is confirmed; 11 - user is declined)
+    * autocheck_bad_reasons - the reason for the request to be automatically declined
+    * signature - signature of the request
+
+    Your request is signed as BASIS_API_SECRET2 (can be found in CRM settings)
+    To create a signature you need to get sha256 hash from concatenation of the following line:
+
+    ```
+    BASIS_API_SECRET2+user_id+user_hash+status+autocheck_bad_reasons
+    ```
+
+    Java signature example:
+    ```
+    String sign256hex = org.apache.commons.codec.digest.DigestUtils.sha256Hex(BASIS_API_SECRET2 + user_id + user_hash + status + autocheck_bad_reasons);
+    if (sign256hex.equals(signature)) {
+        // Signed ...
+    }
+    ```
+
+    PHP signature example:
+    ```
+    $signature = hash('sha256', BASIS_API_SECRET2 . $inp['user_id'] . $inp['user_hash'] . $inp['status'] . $inp['autocheck_bad_reasons']);
+    if ($signature == $inp['signature']) {
+
+    }
+    ```
+
+    In response to callback you have to send the status “200OK” with any text, for example, “OK”.
+
+    If a response has not been received or it did not contain “200OK”, the system stops sending requests for 3 minutes.
+    After 3 minutes it retries to send a request.  And so on.
+
+    <br />
+    <br />
+    ### 3. API integration
+
+    **The order of terminal operations with API:**
+
+
+    1) Call method: /send-form
+
+
+    Using the method, you send basic user parameters
+
+
+    2) Call for One-Time-Password /send-sms
+
+
+    3) SMS code received from the user is sent to /check-sms-code
+
+
+    4) Photo of the user document is sent to /send-document
+
+
+    (2 requests in the case of a two-sided document - ID card)
+
+
+    5) Send user's video (selfy) to /send-video
+
+
+    6) Send user's bank statement /send-statement
+
+
+    7) Call /finish request to end the user registration
+
+
+    8) In order to receive information about the user's data confirmation, it is required frequently make a request to
+    /users/{user_hash}/{api_access_token}
+
+
+    Alternatively, get a callback in case of changes in user’s status (please see "Status callback" section)
+
+
+  title: BASISID API
+tags:
+  - name: send data
+  - name: check data
+  - name: send companies data
+consumes:
+  - application/json
+produces:
+  - application/json
+host: api.basisid.com
+schemes: https
+basePath: /
+paths:
+  /auth/baasid-login:
+    post:
+      tags:
+        - send data
+      summary: API Authorization
+      description: Authorization of BASIS ID registered user
+      operationId: baasid-login
+      parameters:
+        - name: login
+          in: query
+          required: true
+          type: string
+          description: >-
+            The phone number of the user in the following format [country
+            code]-[phone number]
+          x-example: 7-9181234567
+        - name: password
+          in: query
+          required: true
+          type: string
+          description: User password
+        - name: key
+          in: query
+          required: true
+          type: string
+          description: BASIS ID API KEY (from panel)
+          x-example: prod-pHmeBukoXXXXXpXFjOhvjmrXxwwbtZOn
+      responses:
+        '200':
+          description: Successfull authorization
+          schema:
+            required:
+              - status
+              - api_access_token
+              - api_refresh_token
+              - blockchain_read_token
+              - user_hash
+              - user_id
+            type: object
+            properties:
+              status:
+                type: string
+                description: >
+                  Request status (ok or request_more_data - system requests additional data from user)
+                example: ok
+              user_hash:
+                type: string
+                description: Unique user hash
+                example: 9146288d95b60ffa6d043ed7c9b8cf07bd1edaf7
+              user_id:
+                type: number
+                description: Unique user ID
+                example: 123
+              api_access_token:
+                type: string
+                description: >-
+                  Token to retrieve user data through a server-side API Lifetime
+                  of the token is 60 minutes
+                example: aat-gewyTfImeRqsKXhgbdOYAfGNVigmaCfcpaANTJpu
+              api_refresh_token:
+                type: string
+                description: Token for updating user data through a server-side API
+                example: art-tqcJQSzbPHuFhHcIjVoOlMKuyntJoZJKGIzgNDgb
+              blockchain_read_token:
+                type: string
+                description: Token to retrieve user data from blockchain
+                example: blt-tqcJQSzbPHuFhHcIjVoOlMKuyntJoZJKGIzgNDgb
+              access_granted:
+                type: boolean
+                description: user provided access to profile (true) or not (false)
+              company_access_level:
+                type: number
+                description: >
+                  Levels of data collection requirement
+                  (0 - basic data, 1 - additional data, 2 - all data). Double check your company settings in CRM for this parameter.
+              additional_data:
+                type: array
+                description: >
+                  Additional data fields required from user
+                items:
+                  description: >-
+                    Card - credit card information;
+                    Address - address details;
+                    Social - social network information;
+          examples:
+            application/json:
+              status: ok
+              user_hash: 9146288d95b60ffa6d043ed7c9b8cf07bd1edaf7
+              user_id: 882
+              api_access_token: aat-QbttRrwpfKWHvgMdwkIpxzhSfxTpkUnBgDkcOFVd
+              api_refresh_token: art-QLAkyucqBaCiNOgjICGwajPLjuJpQHojFvVXYYGG
+              blockchain_read_token: ''
+        '400':
+          description: >-
+             Input error or wrong login and/or password
+        '500':
+          description: >-
+            Internal Server Error - problem with processing data on server.
+            Please, contact with support team - support@basisid.com
+      x-code-samples:
+        - lang: 'Curl'
+          source: |
+            curl \
+                -H "Content-Type: application/json" \
+                -X POST -d '{"key": "BASIS_API_KEY", "login": "6581234567", "password":"demo"}' \
+                https://api.basisid.com/auth/baasid-login
+
+  /auth/send-form:
+    post:
+      tags:
+        - send data
+      summary: Registration start - send basic data
+      description: >-
+        The first step of registering a new user, sending basic data about user
+        to server
+      operationId: send-form
+      parameters:
+        - name: key
+          in: query
+          required: true
+          type: string
+          description: BASIS ID API KEY (from panel)
+          x-example: prod-pHmeBukoXXXXXpXFjOhvjmrXxwwbtZOn
+        - name: first_name
+          in: query
+          required: true
+          type: string
+          description: User first name
+          x-example: John
+        - name: last_name
+          in: query
+          required: true
+          type: string
+          description: User last name
+          x-example: Doe
+        - name: middle_name
+          in: query
+          required: false
+          type: string
+          description: User middle name
+          x-example: Young
+        - name: email
+          in: query
+          required: true
+          type: string
+          description: User e-mail address
+          x-example: test123@testmail.com
+        - name: phone
+          in: query
+          required: true
+          type: string
+          description: >-
+            The phone number of the user in the following format [country
+            code]-[phone number]
+          x-example: 7-9181234567
+        - name: phone2
+          in: query
+          required: false
+          type: string
+          description: >-
+            Additional phone number of the user in the following format [country
+            code]-[phone number]
+          x-example: 7-9181234567
+        - name: gender
+          in: query
+          required: true
+          type: number
+          description: 'Gender, 0 - male, 1 - female'
+          x-example: 0
+        - name: birthday_day
+          in: query
+          required: true
+          type: string
+          description: 'User birthday day (valid day number, 1-31)'
+        - name: birthday_month
+          in: query
+          required: true
+          type: string
+          description: User birthday month number (1 - January .. 12 - December)
+        - name: birthday_year
+          in: query
+          required: true
+          type: string
+          description: 'User birthday year, valid year number, from 1917 to current year'
+        - name: country_nationality
+          in: query
+          required: true
+          type: string
+          description: 'Country of citizenship, iso2 code'
+      responses:
+        '200':
+          description: Status 200
+          schema:
+            required:
+              - status
+              - checkId
+              - hellosign_mobile_url
+              - hellosign_req_id
+              - hellosign_signature_id
+              - hellosign_url
+              - userHash
+            type: object
+            properties:
+              status:
+                type: string
+                description: Request status
+                example: ok
+              userHash:
+                type: string
+                description: Unique user hash
+                example: 9146288d95b60ffa6d043ed7c9b8cf07bd1edaf7
+              checkId:
+                type: number
+                description: Unique user ID
+              hellosign_req_id:
+                type: string
+                description: HelloSign request ID
+              hellosign_signature_id:
+                type: string
+                description: HelloSign Signature ID
+              hellosign_url:
+                type: string
+                description: HelloSign URL for websites
+              hellosign_mobile_url:
+                type: string
+                description: HelloSign URL for mobile applications
+              errors:
+                type: array
+                description: >-
+                  Error values (for status: bad)
+                items:
+                  description: >-
+                    "error:key" -  API_KEY is not specified (check your CRM system for an API key)
+                    "empty:first_name" -  first name is not specified
+                    "empty:last_name" - last name is not specified
+                    "empty:phone" - phone number is not specified
+                    "empty:email" - e-mail is not specified
+                    "empty:birthday_day" - date of birth error
+                    "empty:birthday_month" - month of birth error
+                    "empty:birthday_year" - year of birth error
+                    "user:exists" -  user with this e-mail/phone number already exists
+          examples:
+            application/json:
+              status: ok
+              userHash: c3732a00d5e297ba5a83504dfe1f2cdb310d0f80
+              checkId: 890
+              hellosign_req_id: 023740133dd331a2f072f8f6d2606667e4670cd5
+              hellosign_signature_id: 55ca08506cd1385c0a6f6358a7681304
+              hellosign_url: >-
+                https://app.hellosign.com/editor/embeddedSign?signature_id=55ca08506cd1385c0a6f6358a7681304&token=43218e1e68f12a5e564caa50c4befb24&client_id=a6167f56915631a2c91e9f4738f5f5a1
+              hellosign_mobile_url: 'http://API_DOMAIN/auth/hellosign/mobile/CvmBlgfpaKovApN'
+        '400':
+          description: >-
+            Bad request - input error (could not parse the JSON input request)
+        '500':
+          description: >-
+            Internal Server Error - problem with processing data on server.
+            Please, contact with support team - support@basisid.com
+      x-code-samples:
+        - lang: Curl
+          source: |
+            curl \
+                -H "Content-Type: application/json" \
+                -X POST -d '{"key": "BASISID_API_KEY", "first_name": "John", "last_name": "Doe", "middle_name": "", "email": "johndoe777@testdemo.com", "phone": "79998885566", "phone2": "", "gender": 1, "birthday_day": "12", "birthday_month": "10", "birthday_year": "1980", "country_nationality": "sg"}' \
+                https://api.basisid.com/auth/send-form
+
+  /auth/send-sms:
+    post:
+      tags:
+        - send data
+      summary: OTP sms request
+      description: Sending SMS to the user to confirm a phone number
+      operationId: send-sms
+      parameters:
+        - name: user_hash
+          in: query
+          required: true
+          type: string
+          description: User hash (received in the /send-form step)
+        - name: check_id
+          in: query
+          required: true
+          type: string
+          description: Unique registration ID (received in the /send form step)
+      responses:
+        '200':
+          description: Status 200
+          schema:
+            required:
+              - phone
+              - status
+            type: object
+            properties:
+              status:
+                type: string
+                description: >-
+                  Request status. Values: ok, bad
+                example: ok
+              phone:
+                type: string
+                description: >-
+                  The phone number of the user in the following format [country
+                  code]-[phone number]
+                example: 1-2345678900
+              errors:
+                type: array
+                description: >-
+                  Error values (for status: bad)
+                items:
+                  description: >-
+                    empty:user_hash - no user_hash
+                    empty:check_id - no check_id
+          examples:
+            application/json:
+              status: ok
+              phone: 1-2345678900
+        '400':
+          description: >-
+            Bad request - input error (could not parse the JSON input request)
+        '500':
+          description: >-
+            Internal Server Error - problem with processing data on server
+            Please, contact with support team - support@basisid.com
+      x-code-samples:
+        - lang: Curl
+          source: |
+            curl \
+                -H "Content-Type: application/json" \
+                -X POST -d '{"user_hash": "c3732a00d5e297ba5a83504dfe1f2cdb310d0f80", "check_id": 890}' \
+                https://api.basisid.com/auth/send-sms
+
+  /auth/check-sms-code:
+    post:
+      tags:
+        - send data
+      summary: Checking the OTP (SMS) code
+      description: OTP (SMS) code checking
+      operationId: check-sms-code
+      parameters:
+        - name: user_hash
+          in: query
+          required: true
+          type: string
+          description: User hash (received in the /send-form step)
+        - name: check_id
+          in: query
+          required: true
+          type: string
+          description: User registration ID (received in the /send-form step)
+        - name: phone
+          in: query
+          required: true
+          type: string
+          description: >-
+            The phone number of the user in the following format [country
+            code]-[phone number]
+          x-example: 7-9181234567
+        - name: code
+          in: query
+          required: true
+          type: string
+          description: Verification code (OTP code) received in SMS
+          x-example: '12345'
+      responses:
+        '200':
+          description: Status 200
+          schema:
+            required:
+              - phone
+              - status
+            type: object
+            properties:
+              status:
+                type: string
+                description: >-
+                  Request status. Values: ok, bad
+                example: ok
+              phone:
+                type: string
+                description: >-
+                  The phone number of the user in the following format [country
+                  code]-[phone number]
+                example: 1-2345678900
+              errors:
+                type: array
+                description: >-
+                  Error values (for status: bad)
+                items:
+                  description: >-
+                    empty:code - wrong or empty OTP code from SMS
+                    empty:user_hash - no user_hash
+                    empty:check_id - no check_id
+          examples:
+            application/json:
+              status: ok
+              phone: 1-2345678900
+        '400':
+          description: >-
+            Bad request - input error (could not parse the JSON input request)
+        '500':
+          description: >-
+            Internal Server Error - problem with processing data on server
+            Please, contact with support team - support@basisid.com
+      x-code-samples:
+        - lang: Curl
+          source: |
+            curl \
+                -H "Content-Type: application/json" \
+                -X POST -d '{"user_hash": "c3732a00d5e297ba5a83504dfe1f2cdb310d0f80", "check_id": 890, "phone": "1-2345678900", "code": "5555"}' \
+                https://api.basisid.com/auth/check-sms-code
+
+  /auth/check-card:
+    post:
+      tags:
+        - send data
+      summary: Debit/Credit card verification
+      description: >-
+        System withdraw a random amount to $1 and refund immediately. We do not
+        store any card details.
+      operationId: check-card
+      parameters:
+        - name: user_hash
+          in: query
+          required: true
+          type: string
+          description: Hash пользователя
+        - name: check_id
+          in: query
+          required: true
+          type: string
+          description: User registration ID (received in the /send-form step)
+        - name: number
+          in: query
+          required: true
+          type: string
+          description: 'Card number without spaces and delimiters, only digits'
+        - name: cvc
+          in: query
+          required: true
+          type: string
+          description: cvv code
+        - name: month
+          in: query
+          required: true
+          type: string
+          description: Card expiration month
+        - name: year
+          in: query
+          required: true
+          type: string
+          description: Card expiration year
+        - name: holder
+          in: query
+          required: true
+          type: string
+          description: Cardholder name
+      responses:
+        '200':
+          description: Status 200
+          schema:
+            required:
+              - status
+            type: object
+            properties:
+              status:
+                type: string
+                description: >
+                  Validation status: valid - card valid, not_valid - card not valid
+                example: valid
+              errors:
+                type: array
+                description: >-
+                  Error values (for status: not_valid)
+                items:
+                  description: >-
+                    empty:user_hash - no user_hash
+                    empty:check_id - no check_id
+                    empty:number - card number is not specified
+                    empty:cvc - CVC code is not specified
+                    empty:month - card expiration month is not specified
+                    empty:year - card expiration year is not specified
+          examples:
+            application/json:
+              status: valid
+        '400':
+          description: >-
+            Bad request - input error (could not parse the JSON input request)
+        '500':
+          description: >-
+            Internal Server Error - problem with processing data on server
+            Please, contact with support team - support@basisid.com
+      x-code-samples:
+        - lang: Curl
+          source: |
+            curl \
+                -H "Content-Type: application/json" \
+                -X POST -d '{"user_hash": "c3732a00d5e297ba5a83504dfe1f2cdb310d0f80", "check_id": 890, "number": "4242424242424242", "cvc": "123", "month": "12", "year": "2018", "holder": "John Doe"}' \
+                https://api.basisid.com/auth/check-card
+
+  /auth/send-document:
+    post:
+      tags:
+        - send data
+      summary: Upload documents to server
+      description: Upload user passport or ID card (2 side photo) on the server
+      operationId: send-document
+      consumes:
+        - multipart/form-data
+      parameters:
+        - name: user_hash
+          in: query
+          required: true
+          type: string
+          description: User hash
+        - name: check_id
+          in: query
+          required: true
+          type: string
+          description: User registration ID (received in the /send-form step)
+        - name: file
+          in: formData
+          required: true
+          type: file
+          format: binary
+          description: Image file
+        - name: step
+          in: query
+          required: false
+          type: number
+          description: >-
+            Document side numeration. "1" by default. For second side of ID card
+            specify "2".
+      responses:
+        '200':
+          description: Status 200
+          schema:
+            required:
+              - status
+            type: object
+            properties:
+              status:
+                type: string
+                description: Upload status
+                example: ok
+          examples:
+            application/json:
+              status: ok
+        '400':
+          description: input data error
+        '404':
+          description: wrong check_id OR user_hash values
+        '500':
+          description: >-
+            Internal Server Error - problem with processing data on server.
+            Please, contact with support team - support@basisid.com
+      x-code-samples:
+        - lang: Curl
+          source: |
+            curl \
+              -F "user_hash=c3732a00d5e297ba5a83504dfe1f2cdb310d0f80" \
+              -F "check_id=890" \
+              -F "step=1" \
+              -F "file=@/path/to/img.jpg" \
+            https://api.basisid.com/auth/send-document
+
+  /auth/send-statement:
+    post:
+      tags:
+        - send data
+      summary: Upload bank statement to server
+      description: Upload bank statement on the server
+      operationId: send-statement
+      consumes:
+        - multipart/form-data
+      parameters:
+        - name: user_hash
+          in: query
+          required: true
+          type: string
+          description: User hash
+        - name: check_id
+          in: query
+          required: true
+          type: string
+          description: User registration ID (received in the /send-form step)
+        - name: file
+          in: formData
+          required: true
+          type: file
+          format: binary
+          description: Image file
+      responses:
+        '200':
+          description: Status 200
+          schema:
+            required:
+              - status
+            type: object
+            properties:
+              status:
+                type: string
+                description: Upload status
+                example: ok
+          examples:
+            application/json:
+              status: ok
+        '400':
+          description: input data error
+        '404':
+          description: wrong check_id OR user_hash values
+        '500':
+          description: >-
+            Internal Server Error - problem with processing data on server.
+            Please, contact with support team - support@basisid.com
+      x-code-samples:
+        - lang: Curl
+          source: |
+            curl \
+              -F "user_hash=c3732a00d5e297ba5a83504dfe1f2cdb310d0f80" \
+              -F "check_id=1013" \
+              -F "file=@/path/to/img.jpg" \
+            https://api.basisid.com/auth/send-statment
+
+  /auth/send-video:
+    post:
+      tags:
+        - send data
+      summary: Upload video to server
+      description: Upload user video to server
+      operationId: send-video
+      consumes:
+        - multipart/form-data
+      parameters:
+        - name: user_hash
+          in: query
+          required: true
+          type: string
+          description: User hash
+        - name: check_id
+          in: query
+          required: true
+          type: string
+          description: User registration ID (received in the /send-form step)
+        - name: file
+          in: formData
+          required: true
+          type: file
+          format: binary
+          description: Video recording file
+      responses:
+        '200':
+          description: Status 200
+          schema:
+            required:
+              - status
+            type: object
+            properties:
+              status:
+                type: string
+                description: Upload status
+                example: ok
+          examples:
+            application/json:
+              status: ok
+        '400':
+          description: input data error
+        '404':
+          description: wrong check_id OR user_hash values
+        '500':
+          description: >-
+            Internal Server Error - problem with processing data on server.
+            Please, contact with support team - support@basisid.com
+      x-code-samples:
+        - lang: Curl
+          source: |
+            curl \
+              -F "user_hash=c3732a00d5e297ba5a83504dfe1f2cdb310d0f80" \
+              -F "check_id=890" \
+              -F "file=@/path/to/mov.MOV" \
+            https://api.basisid.com/auth/send-video
+
+  /auth/finish:
+    post:
+      tags:
+        - send data
+      summary: Completion of registration
+      description: >-
+        Completion of registration. Method to receive the user authorization
+        data;
+      operationId: finish
+      parameters:
+        - name: user_hash
+          in: query
+          required: true
+          type: string
+          description: User hash
+        - name: check_id
+          in: query
+          required: true
+          type: string
+          description: User registration ID (received in the /send-form step)
+        - name: country_residence
+          in: query
+          required: false
+          type: string
+          description: 'Country of residence, iso2 code'
+        - name: city
+          in: query
+          required: false
+          type: string
+          description: City
+        - name: address
+          in: query
+          required: false
+          type: string
+          description: Address
+        - name: address2
+          in: query
+          required: false
+          type: string
+          description: Aditional address
+        - name: zip
+          in: query
+          required: false
+          type: string
+          description: Index
+        - name: fb_id
+          in: query
+          required: false
+          type: string
+          description: User ID in Facebook
+        - name: fb_fname
+          in: query
+          required: false
+          type: string
+          description: User name in Facebook
+        - name: fb_lname
+          in: query
+          required: false
+          type: string
+          description: User surname in Facebook
+        - name: fb_email
+          in: query
+          required: false
+          type: string
+          description: User e-mail in Facebook
+        - name: google_id
+          in: query
+          required: false
+          type: string
+          description: User ID in Google
+        - name: google_fname
+          in: query
+          required: false
+          type: string
+          description: User name in Google
+        - name: google_lname
+          in: query
+          required: false
+          type: string
+          description: User surname in Google
+        - name: google_email
+          in: query
+          required: false
+          type: string
+          description: User e-mail in Google
+        - name: twitter_id
+          in: query
+          required: false
+          type: string
+          description: User ID in Twitter
+        - name: twitter_fname
+          in: query
+          required: false
+          type: string
+          description: User name in Twitter
+        - name: twitter_lname
+          in: query
+          required: false
+          type: string
+          description: User surname in Twitter
+        - name: twitter_nickname
+          in: query
+          required: false
+          type: string
+          description: User nickname in Twitter
+        - name: linkedin_id
+          in: query
+          required: false
+          type: string
+          description: User ID in LinkedIn
+        - name: linkedin_fname
+          in: query
+          required: false
+          type: string
+          description: User name in LinkedIn
+        - name: linkedin_lname
+          in: query
+          required: false
+          type: string
+          description: User surname in LinkedIn
+        - name: linkedin_email
+          in: query
+          required: false
+          type: string
+          description: User e-mail in LinkedIn
+      responses:
+        '200':
+          description: Status 200
+          schema:
+            required:
+              - api_access_token
+              - api_refresh_token
+              - blockchain_read_token
+              - status
+              - user_hash
+              - user_id
+            type: object
+            properties:
+              status:
+                type: string
+                description: >
+                  Validation status. Values: ok, bad
+                example: valid
+              user_hash:
+                type: string
+                description: Unique user hash
+                example: 9146288d95b60ffa6d043ed7c9b8cf07bd1edaf7
+              user_id:
+                type: number
+                description: Unique user ID
+                example: 123
+              api_access_token:
+                type: string
+                description: >-
+                  Token to retrieve user data through a server-side API.
+                  Lifetime of the token is 60 minutes
+                example: aat-gewyTfImeRqsKXhgbdOYAfGNVigmaCfcpaANTJpu
+              api_refresh_token:
+                type: string
+                description: Token for updating user data through a server-side API
+                example: art-tqcJQSzbPHuFhHcIjVoOlMKuyntJoZJKGIzgNDgb
+              blockchain_read_token:
+                type: string
+                description: Token to retrieve user data from blockchain
+                example: blt-tqcJQSzbPHuFhHcIjVoOlMKuyntJoZJKGIzgNDgb
+              errors:
+                type: array
+                description: >-
+                  Error values (for status: bad)
+                items:
+                  description: >-
+                    empty:user_hash - no user_hash
+                    empty:check_id - no check_id
+          examples:
+            application/json:
+              status: ok
+              user_hash: c3732a00d5e297ba5a83504dfe1f2cdb310d0f80
+              user_id: 890
+              api_access_token: aat-yJTccTTPMcBwhmuifKDiINndzqMbzLHmZqOZPGlw
+              api_refresh_token: art-AIzyhpLMnDpstCnAxjYaAYPKMWFIoRRYBZAxlmtY
+              blockchain_read_token: ''
+        '500':
+          description: >-
+            Internal Server Error - problem with processing data on server.
+            Please, contact with support team - support@basisid.com
+      x-code-samples:
+        - lang: Curl
+          source: |
+            curl \
+                -H "Content-Type: application/json" \
+                -X POST -d '{"user_hash": "c3732a00d5e297ba5a83504dfe1f2cdb310d0f80", "check_id": 890, "country_residence": "SG", "city": "Singapore", "address": "First Street, 12-727", "zip": "12345"}' \
+                https://api.basisid.com/auth/finish
+
+  '/users/{user_hash}/{api_access_token}':
+    get:
+      tags:
+        - check data
+      summary: Receiving user information and status validation
+      description: |
+        Receiving user information and status validation after registration /
+        authorization.
+
+        The list of fields depends on the settings in the CRM
+        dashboard.
+
+        The method is applicable ONLY to server-side.
+        DO NOT SHARE the data with anyone and DO NOT GIVE AWAY in open format.
+
+        The result of request depends on the level of access requested by end-user. The access
+        level is determined in the CRM settings. There are 3 methods of access:
+
+          1) Basic data: Name, surname, gender, country of citizenship, e-mail address.
+
+          2) Additional data: Name, surname, gender, country of citizenship, e-mail address, phone number, age, address details.
+
+          3) All data: Name, surname, gender, country of citizenship, e-mail address, phone number, age, address details, passport/id card data, credit card
+            information (bank name, country of the issue), social networks data.
+      operationId: users
+      parameters:
+        - name: user_hash
+          in: path
+          required: true
+          type: string
+          description: 'User hash ID, received after registration/authorization'
+        - name: api_access_token
+          in: path
+          required: true
+          type: string
+          description: 'Token for API access, received after registration/authorization'
+        - name: secret
+          in: query
+          required: true
+          type: string
+          description: >-
+            BASIS ID SECRET1 - secret key, accessible in BASIS ID CRM
+            dashboard.
+      responses:
+        '200':
+          description: Status 200
+          schema:
+            required:
+              - status
+            type: object
+            properties:
+              status:
+                type: string
+                description: >-
+                  For failed result:
+                    denied - access denied
+                    not_found - user is not found (wrong user_hash, api_access_token)
+                  For success result:
+                    The status of the result. Numerical field.  If status is less
+                    than 10 - data processing is not completed.  The status is 10
+                    - user is approved/confirmed.  The status more than 10 -
+                    errors occurred while approving the user.
+                example: 10
+              token:
+                type: string
+                description: >-
+                  Api access token (used in request)
+              user_status:
+                type: number
+                description: >-
+                  The status of the result in Company CRM (for premoderation). If status is less
+                  than 10 - data processing is not completed.  The status is 10
+                  - user is approved/confirmed.  The status more than 10 -
+                  errors occurred while approving the user.
+              profile:
+                type: object
+                description: >-
+                  User profile
+                properties:
+                  id:
+                    type: number
+                    description: Unique numeric user ID
+                  user_hash:
+                    type: string
+                    description: Unique user hash
+                  first_name:
+                    type: string
+                    description: First Name
+                  last_name:
+                    type: string
+                    description: Surname
+                  middle_name:
+                    type: string
+                    description: Middle name
+                  email_confirmed:
+                    type: boolean
+                    description: E-mail confirmation flag. true - e-mail confirmed
+                  email:
+                    type: string
+                    description: E-mail address
+                  phone:
+                    type: string
+                    description: >-
+                      Phone number. The user's phone is confirmed through
+                      one-time-passcode (OTP)
+                  phone2:
+                    type: string
+                    description: Additional phone number
+                  company_application_form:
+                    type: string
+                    description: Link to the company details form of filling
+                  gender:
+                    type: number
+                    description: 'Gender. 0 - male, 1 - female'
+                  country:
+                    type: string
+                    description: Country of citizenship
+                  birthday:
+                    type: string
+                    description: Date of birth in following format - YYYY-MM-DD
+                  country_residence:
+                    type: string
+                    description: Country of residence
+                  city:
+                    type: string
+                    description: City
+                  address:
+                    type: string
+                    description: Address
+                  address2:
+                    type: string
+                    description: Additional address fied
+                  zip:
+                    type: string
+                    description: Zip/Postal code
+                  passport:
+                    type: string
+                    description: Link to a photo of user document (passport/ID card)
+                  passport2:
+                    type: string
+                    description: >-
+                      Link to a photo of second side of user document (applicable to
+                      ID card)
+                  fb_id:
+                    type: string
+                    description: User ID in Facebook
+                  fb_email:
+                    type: string
+                    description: User e-mail in Facebook
+                  google_id:
+                    type: string
+                    description: User ID in Google
+                  google_email:
+                    type: string
+                    description: User e-mail in Google
+                  linkedin_id:
+                    type: string
+                    description: User ID in Linkedin
+                  linkedin_email:
+                    type: string
+                    description: User e-mail in Linkedin
+                  twitter_id:
+                    type: string
+                    description: User ID in Twitter
+                  twitter_nickname:
+                    type: string
+                    description: User nickname in Twitter
+        '500':
+          description: >-
+            Internal Server Error - problem with processing data on server
+            Please, contact with support team - support@basisid.com
+      x-code-samples:
+        - lang: Curl
+          source: |
+            curl \
+                -H "Content-Type: application/json" \
+                -X GET https://api.basisid.com/users/b84caa8cb9097361b89509c7395be1e7f7743442/aat-d67b6cd3-7255-4203-b351-3bd26233dcc8?secret=BASIS_API_SECRET1
+
+  '/users/refresh-access-token/{api_refresh_token}':
+    get:
+      tags:
+        - check data
+      summary: Refresh user token
+      description: |
+        Refresh user token after expiration
+      operationId: users
+      parameters:
+        - name: api_refresh_token
+          in: path
+          required: true
+          type: string
+          description: 'refresh token, received after registration'
+      responses:
+        '200':
+          description: Status 200
+          schema:
+            required:
+              - status
+              - api_access_token
+              - api_refresh_token
+            type: object
+            properties:
+              status:
+                type: string
+                description: >
+                  Validation status. Values: ok, denied, not_found
+                example: ok
+              api_access_token:
+                type: string
+                description: >-
+                  Token to retrieve user data through a server-side API.
+                  Lifetime of the token is 60 minutes
+                example: aat-gewyTfImeRqsKXhgbdOYAfGNVigmaCfcpaANTJpu
+              api_refresh_token:
+                type: string
+                description: Token for updating user data through a server-side API
+                example: art-tqcJQSzbPHuFhHcIjVoOlMKuyntJoZJKGIzgNDgb
+              errors:
+                type: array
+                description: >-
+                  Error values (for status: bad)
+
+                    empty:user_hash - no user_hash
+
+                    empty:check_id - no check_id
+          examples:
+            application/json:
+              status: ok
+              api_access_token: aat-yJTccTTPMcBwhmuifKDiINndzqMbzLHmZqOZPGlw
+              api_refresh_token: art-AIzyhpLMnDpstCnAxjYaAYPKMWFIoRRYBZAxlmtY
+        '500':
+          description: >-
+            Internal Server Error - problem with processing data on server.
+            Please, contact with support team
+      x-code-samples:
+        - lang: Curl
+          source: |
+            curl \
+                -H "Content-Type: application/json" \
+                -X GET https://api.basisid.com/users/refresh-access-token/art-AIzyhpLMnDpstCnAxjYaAYPKMWFIoRRYBZAxlmtY
+  '/auth/company':
+    post:
+      tags:
+        - send companies data
+      summary: Saving company information
+      description: |
+
+      operationId: company
+      parameters:
+        - name: key
+          in: query
+          required: true
+          type: string
+          description: 'BASIS ID API KEY (from panel)'
+        - name: userHash
+          in: query
+          required: true
+          type: string
+          description: 'User hash ID, received after registration/authorization or auth/finish (user_hash)'
+        - name: authToken
+          in: query
+          required: true
+          type: string
+          description: 'Token for API access, received after registration/authorization or auth/finish (api_access_token)'
+        - name: name
+          in: query
+          required: true
+          type: string
+          description: 'Company name'
+        - name: dba
+          in: query
+          required: true
+          type: string
+          description: 'Doing Business As (DBA)'
+        - name: incDate
+          in: query
+          required: true
+          type: string
+          description: 'Incorporation Date (YYYY-MM-DD)'
+        - name: regNum
+          in: query
+          required: true
+          type: string
+          description: 'Registration Number'
+        - name: regCountry
+          in: query
+          required: true
+          type: string
+          description: 'Registration Address - Country, iso2 code'
+        - name: regCity
+          in: query
+          required: true
+          type: string
+          description: 'Registration Address - City'
+        - name: regZip
+          in: query
+          required: true
+          type: string
+          description: 'Registration Address - Zip/ Postal Code'
+        - name: regStreet
+          in: query
+          required: true
+          type: string
+          description: 'Registration Address - Street'
+      responses:
+        '200':
+          description: Status 200
+          schema:
+            required:
+              - status
+            type: object
+            properties:
+              status:
+                type: string
+                description: >-
+                  For failed result:
+                    denied - access denied
+                  For success result:
+                    success
+                example: success
+              token:
+                type: string
+                description: >-
+                  Api access token (used in request)
+          examples:
+            application/json:
+              status: success
+        '500':
+          description: >-
+            Internal Server Error - problem with processing data on server
+            Please, contact with support team - support@basisid.com
+      x-code-samples:
+        - lang: Curl
+          source: |
+            curl \
+                -H "Content-Type: application/json" \
+                -X POST -d '{"key": "BASIS_API_KEY", "userHash": "b84caa8cb9097361b89509c7395be1e7f7743442", "authToken":"aat-d67b6cd3-7255-4203-b351-3bd26233dcc8", "name": "My company name", "dba": "Good Company", "incDate": "2017-10-11", "regNum": "B11111111", "regCountry": "sg", "regCity": "Singapore", "regZip": "045656", "regStreet": "The finest Street, 11"}' \
+                https://api.basisid.com/auth/company
+  /auth/company-upload:
+    post:
+      tags:
+        - send companies data
+      summary: Upload company documents to server
+      description: Upload company documents on the server
+      operationId: company-upload
+      consumes:
+        - multipart/form-data
+      parameters:
+        - name: key
+          in: query
+          required: true
+          type: string
+          description: 'BASIS ID API KEY (from panel)'
+        - name: userHash
+          in: query
+          required: true
+          type: string
+          description: 'User hash ID, received after registration/authorization or auth/finish (user_hash)'
+        - name: authToken
+          in: query
+          required: true
+          type: string
+          description: 'Token for API access, received after registration/authorization or auth/finish (api_access_token)'
+        - name: num
+          in: query
+          required: false
+          type: number
+          description: >-
+            Document type. "1" by default.
+            "1" - Certificate of Incorporation or Business Registration Certificate or equivalent document issued by Government authority.
+            "2" - Signed organisation chart showing share holding structure and percentage.
+            "3" - Copy ID of UBOs and Directors. Acceptable IDs include: Valid Passport, National ID, or Driver License.
+            "4" - Latest audited financial report.
+            "5" - A copy of recent statement (no older than 3 months) for the bank account from which client indends to fund the prepaid account.
+            "6" - A copy of business license, if applicable.
+        - name: file
+          in: formData
+          required: true
+          type: file
+          format: binary
+          description: Document file (.jpg, .jpeg, .png, .gif, .tiff, .pdf, .doc, .docx, .xls, .xlsx, .txt)
+
+      responses:
+        '200':
+          description: Status 200
+          schema:
+            required:
+              - status
+            type: object
+            properties:
+              status:
+                type: string
+                description: >-
+                  For failed result:
+                    denied - access denied
+                  For success result:
+                    ok
+                example: ok
+              token:
+                type: string
+                description: >-
+                  Api access token (used in request)
+          examples:
+            application/json:
+              status: ok
+        '500':
+          description: >-
+            Internal Server Error - problem with processing data on server.
+            Please, contact with support team - support@basisid.com
+      x-code-samples:
+        - lang: Curl
+          source: |
+            curl \
+              -F "key=BASIS_API_KEY" \
+              -F "userHash=b84caa8cb9097361b89509c7395be1e7f7743442" \
+              -F "authToken=aat-d67b6cd3-7255-4203-b351-3bd26233dcc8" \
+              -F "num=1" \
+              -F "file=@/path/to/file.pdf" \
+            https://api.basisid.com/auth/company-upload
+

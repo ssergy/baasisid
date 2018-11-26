@@ -1,8 +1,8 @@
 {
 	"info": {
-		"name": "BaasisID API",
+		"name": "BasisID API",
 		"_postman_id": "74979e82-ee3e-23ce-38e9-46db4f05b049",
-		"description": "## BAASIS ID integration API\nBAASIS ID provides 2 available integration approaches:\n\n1) Web Widget enables you to embed verification features in your website or\napplication\n\n2) Status callback\n\n3) Customer integration using our APIs.\n\n<br />\n### 1. Web Widget integration\n\nEmbed the BAASIS ID Login button in your registration/authorisation form (like Facebook, Google+ and other social network buttons);\n  You are able to find 3 different colour schemes.\n\nInsert widget code in &lt;head&gt; ... &lt;/head&gt; section on your website:\n```\n<script type=\"text/javascript\" src=\"https://api.baasisid.com/assets/js/widget.js\"></script>\n```\n<br />\n\nAdd widget location on your website after &lt;body&gt; tag:\n\n```\n<div id=\"bas-widget-container\" style=\"min-height: 350px;\"> BAASIS ID loading...</div>\n```\n\n<br />\n\nAdd widget code on the bottom of your page before &lt;/body&gt; tag:\n\n```\n<script type=\"text/javascript\">\n   window.BAS.AS.initFrame({\n       key: \"BAASISID_API_KEY\",\n        bas_gw: \"https://api.baasisid.com/\",\n        container_id: \"bas-widget-container\",\n\n        ui: {\n            width: \"100%\",\n            height: \"108px\",\n            style: \"\",\n        },\n\n        options: {\n\n        },\n        events:{\n            onLoad: function(){\n               console.log(\"BAS AS loaded\");\n            },\n\n            onManualCheck: function(result) {\n               if (result.status === \"ok\"){\n                  // User check success\n                  // ... Add Your code here ...\n               } else if (result.status === \"canceled\") {\n                 // User pushed cancel button\n               }\n            },\n\n            onAuthSuccess: function(result) {\n               // User auth success\n               // ... Add Your code here ...\n            },\n        }\n    });\n</script>\n```\n<br />\n\n**Widget settings:**\n\nReplace BAASISID_API_KEY with the BAASIS ID API Key.\n\nYou can find the Key in your CRM profile;\n\n\nYou have to configure the data transfer using 2 Widget methods: **onManualCheck** and **onAuthSuccess**;\n\n\n**onManualCheck** - the method is called by Widget in case of successful  / unsuccessful end of the user registration via Widget.\n\nYou will receive object called \"result\".\n\n\nIf user successfully registered, result looks like:\n\n ```\n {status: 'ok', user_hash: 'XXXXXXXXXXX', api_access_token: 'YYYYYYYYYYYYY'}\n ```\n\n  In case if registration has been canceled:\n\n\n```\n{status: 'canceled'}\n```\n\nThe values of \"result\" object:\n * status - request status;\n * user_hash - unique string user ID;\n * api_access_token - token to work with BAASIS ID server;\n\nToken lifetime: 60 minutes.\n\n\n**onAuthSuccess** - the method is called by Widget in case of successful user authorisation.\n  You will receive object called \"result\". If user successfully registered, result looks similiarly to onManualCheck in case of completion:\n```\n{status: 'ok', user_hash: 'XXXXXXXXXXX', api_access_token: 'YYYYYYYYYYYYY'}\n```\n\nIf you receive a successful \"result\" object, you must send a request to your server and execute a server API request from the **server**:\n\n\n  (see \"Check data / Receiving user information and status validation\" in this API doc)\n\n```\n/users/{user_hash}/{api_access_token}?secret=BAASIS_API_SECRET1\n```\n\n\nFor request to Your server in javascript you can use ajax query jquery library (jquery.com)\n\n```\nfunction check_result(result) {\n  $.get('https://your-own-server.com/?hash='+result.user_hash+'&token='+result.api_access_token,\n  function(data) {\n  ...\n  });\n}\n```\n\nor redirect to Your server page\n\n```\ndocument.location.href='https://your-own-server.com/?hash='+result.user_hash+'&token='+result.api_access_token;\n\n```\n\n<br />\n<br />\n### 2. Status callback\n\nCallback is being sent if a user’s status is changed to ‘approved’ or ‘declined’.\nIn case of post moderation, callback is only being sent when your company performs double check on the client.\n\nTo enable callback, please install Callback Url in CRM settings.\n\nAn example of callback request:\n```\n{\"user_id\":2027,\n \"user_hash\":\"27c5728a-7130-408d-b0a1-d55ed8ae7b2f\",\n \"status\":11,\n \"signature\":\"7ca05937a0e5c42147be2aa23ffad87e80bd866e1ff7950ec6841d4d87d844fe\",\n \"autocheck_bad_reasons\":\"\"}\n```\n\n* user_id - user’s ID\n* user_hash - user’s unique hash\n* status - user’s status (10 - user is confirmed; 11 - user is declined)\n* autocheck_bad_reasons - the reason for the request to be automatically declined\n* signature - signature of the request\n\nYour request is signed as BAASIS_API_SECRET2 (can be found in CRM settings)\nTo create a signature you need to get sha256 hash from concatenation of the following line:\n\n```\nBAASIS_API_SECRET2+user_id+user_hash+status+autocheck_bad_reasons\n```\n\nJava signature example:\n```\nString sign256hex = org.apache.commons.codec.digest.DigestUtils.sha256Hex(BAASIS_API_SECRET2 + user_id + user_hash + status + autocheck_bad_reasons);\nif (sign256hex.equals(signature)) {\n    // Signed ...\n}\n```\n\nPHP signature example:\n```\n$signature = hash('sha256', BAASIS_API_SECRET2 . $inp['user_id'] . $inp['user_hash'] . $inp['status'] . $inp['autocheck_bad_reasons']);\nif ($signature == $inp['signature']) {\n\n}\n```\n\nIn response to callback you have to send the status “200OK” with any text, for example, “OK”.\n\nIf a response has not been received or it did not contain “200OK”, the system stops sending requests for 3 minutes.\nAfter 3 minutes it retries to send a request.  And so on.\n\n<br />\n<br />\n### 3. API integration\n\n**The order of terminal operations with API:**\n\n\n1) Call method: /send-form\n\n\nUsing the method, you send basic user parameters\n\n\n2) Call for One-Time-Password /send-sms\n\n\n3) SMS code received from the user is sent to /check-sms-code\n\n\n4) Photo of the user document is sent to /send-document\n\n\n(2 requests in the case of a two-sided document - ID card)\n\n\n5) Send user's video (selfy) to /send-video\n\n\n6) Send user's bank statement /send-statement\n\n\n7) Call /finish request to end the user registration\n\n\n8) In order to receive information about the user's data confirmation, it is required frequently make a request to\n/users/{user_hash}/{api_access_token}\n\n\nAlternatively, get a callback in case of changes in user’s status (please see \"Status callback\" section)\n",
+		"description": "## BASIS ID integration API\nBASIS ID provides 2 available integration approaches:\n\n1) Web Widget enables you to embed verification features in your website or\napplication\n\n2) Status callback\n\n3) Customer integration using our APIs.\n\n<br />\n### 1. Web Widget integration\n\nEmbed the BASIS ID Login button in your registration/authorisation form (like Facebook, Google+ and other social network buttons);\n  You are able to find 3 different colour schemes.\n\nInsert widget code in &lt;head&gt; ... &lt;/head&gt; section on your website:\n```\n<script type=\"text/javascript\" src=\"https://api.basisid.com/assets/js/widget.js\"></script>\n```\n<br />\n\nAdd widget location on your website after &lt;body&gt; tag:\n\n```\n<div id=\"bas-widget-container\" style=\"min-height: 350px;\"> BASIS ID loading...</div>\n```\n\n<br />\n\nAdd widget code on the bottom of your page before &lt;/body&gt; tag:\n\n```\n<script type=\"text/javascript\">\n   window.BAS.AS.initFrame({\n       key: \"BASISID_API_KEY\",\n        bas_gw: \"https://api.basisid.com/\",\n        container_id: \"bas-widget-container\",\n\n        ui: {\n            width: \"100%\",\n            height: \"108px\",\n            style: \"\",\n        },\n\n        options: {\n\n        },\n        events:{\n            onLoad: function(){\n               console.log(\"BAS AS loaded\");\n            },\n\n            onManualCheck: function(result) {\n               if (result.status === \"ok\"){\n                  // User check success\n                  // ... Add Your code here ...\n               } else if (result.status === \"canceled\") {\n                 // User pushed cancel button\n               }\n            },\n\n            onAuthSuccess: function(result) {\n               // User auth success\n               // ... Add Your code here ...\n            },\n        }\n    });\n</script>\n```\n<br />\n\n**Widget settings:**\n\nReplace BASISID_API_KEY with the BASIS ID API Key.\n\nYou can find the Key in your CRM profile;\n\n\nYou have to configure the data transfer using 2 Widget methods: **onManualCheck** and **onAuthSuccess**;\n\n\n**onManualCheck** - the method is called by Widget in case of successful  / unsuccessful end of the user registration via Widget.\n\nYou will receive object called \"result\".\n\n\nIf user successfully registered, result looks like:\n\n ```\n {status: 'ok', user_hash: 'XXXXXXXXXXX', api_access_token: 'YYYYYYYYYYYYY'}\n ```\n\n  In case if registration has been canceled:\n\n\n```\n{status: 'canceled'}\n```\n\nThe values of \"result\" object:\n * status - request status;\n * user_hash - unique string user ID;\n * api_access_token - token to work with BASIS ID server;\n\nToken lifetime: 60 minutes.\n\n\n**onAuthSuccess** - the method is called by Widget in case of successful user authorisation.\n  You will receive object called \"result\". If user successfully registered, result looks similiarly to onManualCheck in case of completion:\n```\n{status: 'ok', user_hash: 'XXXXXXXXXXX', api_access_token: 'YYYYYYYYYYYYY'}\n```\n\nIf you receive a successful \"result\" object, you must send a request to your server and execute a server API request from the **server**:\n\n\n  (see \"Check data / Receiving user information and status validation\" in this API doc)\n\n```\n/users/{user_hash}/{api_access_token}?secret=BASIS_API_SECRET1\n```\n\n\nFor request to Your server in javascript you can use ajax query jquery library (jquery.com)\n\n```\nfunction check_result(result) {\n  $.get('https://your-own-server.com/?hash='+result.user_hash+'&token='+result.api_access_token,\n  function(data) {\n  ...\n  });\n}\n```\n\nor redirect to Your server page\n\n```\ndocument.location.href='https://your-own-server.com/?hash='+result.user_hash+'&token='+result.api_access_token;\n\n```\n\n<br />\n<br />\n### 2. Status callback\n\nCallback is being sent if a user’s status is changed to ‘approved’ or ‘declined’.\nIn case of post moderation, callback is only being sent when your company performs double check on the client.\n\nTo enable callback, please install Callback Url in CRM settings.\n\nAn example of callback request:\n```\n{\"user_id\":2027,\n \"user_hash\":\"27c5728a-7130-408d-b0a1-d55ed8ae7b2f\",\n \"status\":11,\n \"signature\":\"7ca05937a0e5c42147be2aa23ffad87e80bd866e1ff7950ec6841d4d87d844fe\",\n \"autocheck_bad_reasons\":\"\"}\n```\n\n* user_id - user’s ID\n* user_hash - user’s unique hash\n* status - user’s status (10 - user is confirmed; 11 - user is declined)\n* autocheck_bad_reasons - the reason for the request to be automatically declined\n* signature - signature of the request\n\nYour request is signed as BASIS_API_SECRET2 (can be found in CRM settings)\nTo create a signature you need to get sha256 hash from concatenation of the following line:\n\n```\nBASIS_API_SECRET2+user_id+user_hash+status+autocheck_bad_reasons\n```\n\nJava signature example:\n```\nString sign256hex = org.apache.commons.codec.digest.DigestUtils.sha256Hex(BASIS_API_SECRET2 + user_id + user_hash + status + autocheck_bad_reasons);\nif (sign256hex.equals(signature)) {\n    // Signed ...\n}\n```\n\nPHP signature example:\n```\n$signature = hash('sha256', BASIS_API_SECRET2 . $inp['user_id'] . $inp['user_hash'] . $inp['status'] . $inp['autocheck_bad_reasons']);\nif ($signature == $inp['signature']) {\n\n}\n```\n\nIn response to callback you have to send the status “200OK” with any text, for example, “OK”.\n\nIf a response has not been received or it did not contain “200OK”, the system stops sending requests for 3 minutes.\nAfter 3 minutes it retries to send a request.  And so on.\n\n<br />\n<br />\n### 3. API integration\n\n**The order of terminal operations with API:**\n\n\n1) Call method: /send-form\n\n\nUsing the method, you send basic user parameters\n\n\n2) Call for One-Time-Password /send-sms\n\n\n3) SMS code received from the user is sent to /check-sms-code\n\n\n4) Photo of the user document is sent to /send-document\n\n\n(2 requests in the case of a two-sided document - ID card)\n\n\n5) Send user's video (selfy) to /send-video\n\n\n6) Send user's bank statement /send-statement\n\n\n7) Call /finish request to end the user registration\n\n\n8) In order to receive information about the user's data confirmation, it is required frequently make a request to\n/users/{user_hash}/{api_access_token}\n\n\nAlternatively, get a callback in case of changes in user’s status (please see \"Status callback\" section)\n",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"item": [
@@ -29,11 +29,11 @@
 							"raw": "{\n\n    \"login\": \"{{login}}\",\n    \"password\": \"{{password}}\",\n    \"key\": \"{{key}}\"\n}"
 						},
 						"url": {
-							"raw": "https://api.baasisid.com/auth/baasid-login",
+							"raw": "https://api.basisid.com/auth/baasid-login",
 							"protocol": "https",
 							"host": [
 								"api",
-								"baasisid",
+								"basisid",
 								"com"
 							],
 							"path": [
@@ -41,7 +41,7 @@
 								"baasid-login"
 							]
 						},
-						"description": "Authorization of BAASIS ID registered user"
+						"description": "Authorization of BASISID registered user"
 					},
 					"response": []
 				},
@@ -64,11 +64,11 @@
 							"raw": "{\n\n    \"key\": \"{{key}}\",\n    \"first_name\": \"{{first_name}}\",\n    \"last_name\": \"{{last_name}}\",\n    \"middle_name\": \"{{middle_name}}\",\n    \"email\": \"{{email}}\",\n    \"phone\": \"{{phone}}\",\n    \"phone2\": \"{{phone2}}\",\n    \"gender\": \"{{gender}}\",\n    \"birthday_day\": \"{{birthday_day}}\",\n    \"birthday_month\": \"{{birthday_month}}\",\n    \"birthday_year\": \"{{birthday_year}}\",\n    \"country_nationality\": \"{{country_nationality}}\"\n}"
 						},
 						"url": {
-							"raw": "https://api.baasisid.com/auth/send-form",
+							"raw": "https://api.basisid.com/auth/send-form",
 							"protocol": "https",
 							"host": [
 								"api",
-								"baasisid",
+								"basisid",
 								"com"
 							],
 							"path": [
@@ -99,11 +99,11 @@
 							"raw": "{\n\n    \"user_hash\": \"{{user_hash}}\",\n    \"check_id\": \"{{check_id}}\"\n}"
 						},
 						"url": {
-							"raw": "https://api.baasisid.com/auth/send-sms",
+							"raw": "https://api.basisid.com/auth/send-sms",
 							"protocol": "https",
 							"host": [
 								"api",
-								"baasisid",
+								"basisid",
 								"com"
 							],
 							"path": [
@@ -134,11 +134,11 @@
 							"raw": "{\n\n    \"user_hash\": \"{{user_hash}}\",\n    \"check_id\": \"{{check_id}}\",\n    \"code\": \"{{code}}\"\n}"
 						},
 						"url": {
-							"raw": "https://api.baasisid.com/auth/check-sms-code",
+							"raw": "https://api.basisid.com/auth/check-sms-code",
 							"protocol": "https",
 							"host": [
 								"api",
-								"baasisid",
+								"basisid",
 								"com"
 							],
 							"path": [
@@ -169,11 +169,11 @@
 							"raw": "{\n\n    \"user_hash\": \"{{user_hash}}\",\n    \"check_id\": \"{{check_id}}\",\n    \"number\": \"{{number}}\",\n    \"cvc\": \"{{cvc}}\",\n    \"month\": \"{{month}}\",\n    \"year\": \"{{year}}\",\n    \"holder\": \"{{holder}}\"\n}"
 						},
 						"url": {
-							"raw": "https://api.baasisid.com/auth/check-card",
+							"raw": "https://api.basisid.com/auth/check-card",
 							"protocol": "https",
 							"host": [
 								"api",
-								"baasisid",
+								"basisid",
 								"com"
 							],
 							"path": [
@@ -191,10 +191,6 @@
 						"method": "POST",
 						"header": [
 							{
-								"key": "Accept",
-								"value": "application/json"
-							},
-							{
 								"key": "Content-Type",
 								"value": "multipart/form-data"
 							}
@@ -206,22 +202,7 @@
 									"key": "file",
 									"value": "{{file}}",
 									"type": "file"
-								}
-							]
-						},
-						"url": {
-							"raw": "https://api.baasisid.com/auth/send-document?user_hash={{user_hash}}&check_id={{check_id}}&step={{step}}",
-							"protocol": "https",
-							"host": [
-								"api",
-								"baasisid",
-								"com"
-							],
-							"path": [
-								"auth",
-								"send-document"
-							],
-							"query": [
+								},
 								{
 									"key": "user_hash",
 									"value": "{{user_hash}}"
@@ -236,6 +217,22 @@
 								}
 							]
 						},
+						"url": {
+							"raw": "https://api.basisid.com/auth/send-document?user_hash={{user_hash}}&check_id={{check_id}}&step={{step}}",
+							"protocol": "https",
+							"host": [
+								"api",
+								"basisid",
+								"com"
+							],
+							"path": [
+								"auth",
+								"send-document"
+							],
+							"query": [
+								
+							]
+						},
 						"description": "Upload user passport or ID card (2 side photo) on the server"
 					},
 					"response": []
@@ -245,10 +242,6 @@
 					"request": {
 						"method": "POST",
 						"header": [
-							{
-								"key": "Accept",
-								"value": "application/json"
-							},
 							{
 								"key": "Content-Type",
 								"value": "multipart/form-data"
@@ -261,22 +254,7 @@
 									"key": "file",
 									"value": "{{file}}",
 									"type": "file"
-								}
-							]
-						},
-						"url": {
-							"raw": "https://api.baasisid.com/auth/send-statement?user_hash={{user_hash}}&check_id={{check_id}}",
-							"protocol": "https",
-							"host": [
-								"api",
-								"baasisid",
-								"com"
-							],
-							"path": [
-								"auth",
-								"send-statement"
-							],
-							"query": [
+								},
 								{
 									"key": "user_hash",
 									"value": "{{user_hash}}"
@@ -285,6 +263,22 @@
 									"key": "check_id",
 									"value": "{{check_id}}"
 								}
+							]
+						},
+						"url": {
+							"raw": "https://api.basisid.com/auth/send-statement?user_hash={{user_hash}}&check_id={{check_id}}",
+							"protocol": "https",
+							"host": [
+								"api",
+								"basisid",
+								"com"
+							],
+							"path": [
+								"auth",
+								"send-statement"
+							],
+							"query": [
+								
 							]
 						},
 						"description": "Upload bank statement on the server"
@@ -297,10 +291,6 @@
 						"method": "POST",
 						"header": [
 							{
-								"key": "Accept",
-								"value": "application/json"
-							},
-							{
 								"key": "Content-Type",
 								"value": "multipart/form-data"
 							}
@@ -312,22 +302,7 @@
 									"key": "file",
 									"value": "{{file}}",
 									"type": "file"
-								}
-							]
-						},
-						"url": {
-							"raw": "https://api.baasisid.com/auth/send-video?user_hash={{user_hash}}&check_id={{check_id}}",
-							"protocol": "https",
-							"host": [
-								"api",
-								"baasisid",
-								"com"
-							],
-							"path": [
-								"auth",
-								"send-video"
-							],
-							"query": [
+								},
 								{
 									"key": "user_hash",
 									"value": "{{user_hash}}"
@@ -336,6 +311,22 @@
 									"key": "check_id",
 									"value": "{{check_id}}"
 								}
+							]
+						},
+						"url": {
+							"raw": "https://api.basisid.com/auth/send-video?user_hash={{user_hash}}&check_id={{check_id}}",
+							"protocol": "https",
+							"host": [
+								"api",
+								"basisid",
+								"com"
+							],
+							"path": [
+								"auth",
+								"send-video"
+							],
+							"query": [
+								
 							]
 						},
 						"description": "Upload user video to server"
@@ -361,11 +352,11 @@
 							"raw": "{\n\n    \"user_hash\": \"{{user_hash}}\",\n    \"check_id\": \"{{check_id}}\",\n    \"country_residence\": \"{{country_residence}}\",\n    \"city\": \"{{city}}\",\n    \"address\": \"{{address}}\",\n    \"address2\": \"{{address2}}\",\n    \"zip\": \"{{zip}}\",\n    \"fb_id\": \"{{fb_id}}\",\n    \"fb_fname\": \"{{fb_fname}}\",\n    \"fb_lname\": \"{{fb_lname}}\",\n    \"fb_email\": \"{{fb_email}}\",\n    \"google_id\": \"{{google_id}}\",\n    \"google_fname\": \"{{google_fname}}\",\n    \"google_lname\": \"{{google_lname}}\",\n    \"google_email\": \"{{google_email}}\",\n    \"twitter_id\": \"{{twitter_id}}\",\n    \"twitter_fname\": \"{{twitter_fname}}\",\n    \"twitter_lname\": \"{{twitter_lname}}\",\n    \"twitter_nickname\": \"{{twitter_nickname}}\",\n    \"linkedin_id\": \"{{linkedin_id}}\",\n    \"linkedin_fname\": \"{{linkedin_fname}}\",\n    \"linkedin_lname\": \"{{linkedin_lname}}\",\n    \"linkedin_email\": \"{{linkedin_email}}\"\n}"
 						},
 						"url": {
-							"raw": "https://api.baasisid.com/auth/finish",
+							"raw": "https://api.basisid.com/auth/finish",
 							"protocol": "https",
 							"host": [
 								"api",
-								"baasisid",
+								"basisid",
 								"com"
 							],
 							"path": [
@@ -396,11 +387,11 @@
 							"raw": "{\n\n    \"key\": \"{{key}}\",\n    \"userHash\": \"{{userHash}}\",\n    \"authToken\": \"{{authToken}}\",\n    \"name\": \"{{name}}\",\n    \"dba\": \"{{dba}}\",\n    \"incDate\": \"{{incDate}}\",\n    \"regNum\": \"{{regNum}}\",\n    \"regCountry\": \"{{regCountry}}\",\n    \"regCity\": \"{{regCity}}\",\n    \"regZip\": \"{{regZip}}\",\n    \"regStreet\": \"{{regStreet}}\"\n}"
 						},
 						"url": {
-							"raw": "https://api.baasisid.com/auth/company",
+							"raw": "https://api.basisid.com/auth/company",
 							"protocol": "https",
 							"host": [
 								"api",
-								"baasisid",
+								"basisid",
 								"com"
 							],
 							"path": [
@@ -418,10 +409,6 @@
 						"method": "POST",
 						"header": [
 							{
-								"key": "Accept",
-								"value": "application/json"
-							},
-							{
 								"key": "Content-Type",
 								"value": "multipart/form-data"
 							}
@@ -433,22 +420,7 @@
 									"key": "file",
 									"value": "{{file}}",
 									"type": "file"
-								}
-							]
-						},
-						"url": {
-							"raw": "https://api.baasisid.com/auth/company-upload?key={{key}}&userHash={{userHash}}&authToken={{authToken}}&num={{num}}",
-							"protocol": "https",
-							"host": [
-								"api",
-								"baasisid",
-								"com"
-							],
-							"path": [
-								"auth",
-								"company-upload"
-							],
-							"query": [
+								},
 								{
 									"key": "key",
 									"value": "{{key}}"
@@ -465,6 +437,22 @@
 									"key": "num",
 									"value": "{{num}}"
 								}
+							]
+						},
+						"url": {
+							"raw": "https://api.basisid.com/auth/company-upload?key={{key}}&userHash={{userHash}}&authToken={{authToken}}&num={{num}}",
+							"protocol": "https",
+							"host": [
+								"api",
+								"basisid",
+								"com"
+							],
+							"path": [
+								"auth",
+								"company-upload"
+							],
+							"query": [
+								
 							]
 						},
 						"description": "Upload company documents on the server"
@@ -493,11 +481,11 @@
 						],
 						"body": {},
 						"url": {
-							"raw": "https://api.baasisid.com/users/:user_hash/:api_access_token?secret={{secret}}",
+							"raw": "https://api.basisid.com/users/:user_hash/:api_access_token?secret={{secret}}",
 							"protocol": "https",
 							"host": [
 								"api",
-								"baasisid",
+								"basisid",
 								"com"
 							],
 							"path": [
@@ -542,11 +530,11 @@
 						],
 						"body": {},
 						"url": {
-							"raw": "https://api.baasisid.com/users/refresh-access-token/:api_refresh_token",
+							"raw": "https://api.basisid.com/users/refresh-access-token/:api_refresh_token",
 							"protocol": "https",
 							"host": [
 								"api",
-								"baasisid",
+								"basisid",
 								"com"
 							],
 							"path": [

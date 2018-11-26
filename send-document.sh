@@ -3,4 +3,4 @@ curl \
   -F "check_id=890" \
   -F "step=1" \
   -F "file=@/files/b5tk39i2lqg4chqpqtcg.jpg" \
-https://api.baasisid.com/auth/send-document
+https://api.basisid.com/auth/send-document
