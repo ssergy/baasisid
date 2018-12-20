@@ -1,0 +1,1 @@
+curl https://api.basisid.com/users/info/email@example.com/d67b6cd3-7255-4203-b351-3bd26233dcc8/a956bd8dceff54384a065dc6ec183ddf52302e4613e634769cfeebfdc87c1677
