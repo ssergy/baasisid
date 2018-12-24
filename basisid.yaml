@@ -433,14 +433,14 @@ paths:
           in: query
           required: false
           type: string
-          description: Unique registration ID, for edit profile (received in the /base-check previous request)
+          description: Unique registration ID, for edit profile (user_id, received in the /base-check previous request)
       responses:
         '200':
           description: Status 200
           schema:
             required:
               - status
-              - check_id
+              - user_id
               - user_hash
               - api_refresh_token
             type: object
@@ -449,13 +449,13 @@ paths:
                 type: string
                 description: Request status
                 example: ok
-              userHash:
+              user_id:
+                type: number
+                description: Unique user ID
+              user_hash:
                 type: string
                 description: Unique user hash
                 example: 9146288d95b60ffa6d043ed7c9b8cf07bd1edaf7
-              checkId:
-                type: number
-                description: Unique user ID
               errors:
                 type: array
                 description: >-
@@ -514,7 +514,7 @@ paths:
           in: query
           required: true
           type: string
-          description: Unique registration ID (received in the /base-check step)
+          description: Unique registration ID (user_id, received in the /base-check step)
       responses:
         '200':
           description: Status 200
@@ -578,7 +578,7 @@ paths:
           in: query
           required: true
           type: string
-          description: User registration ID (received in the /base-check step)
+          description: User registration ID (user_id, received in the /base-check step)
         - name: phone
           in: query
           required: true
@@ -659,7 +659,7 @@ paths:
           in: query
           required: true
           type: string
-          description: User registration ID (received in the /base-check step)
+          description: User registration ID (user_id, received in the /base-check step)
         - name: file
           in: formData
           required: true
@@ -724,7 +724,7 @@ paths:
           in: query
           required: true
           type: string
-          description: User registration ID (received in the /base-check step)
+          description: User registration ID (user_id, received in the /base-check step)
         - name: file
           in: formData
           required: true
@@ -781,7 +781,7 @@ paths:
           in: query
           required: true
           type: string
-          description: User registration ID (received in the /base-check step)
+          description: User registration ID (user_id, received in the /base-check step)
         - name: file
           in: formData
           required: true
@@ -837,7 +837,7 @@ paths:
           in: query
           required: true
           type: string
-          description: User registration ID (received in the /base-check step)
+          description: User registration ID (user_id, received in the /base-check step)
         - name: file
           in: formData
           required: true
@@ -893,7 +893,7 @@ paths:
           in: query
           required: true
           type: string
-          description: User registration ID (received in the /base-check step)
+          description: User registration ID (user_id, received in the /base-check step)
         - name: file
           in: formData
           required: true
